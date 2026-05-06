@@ -21,7 +21,6 @@ export const translations = {
       personalization: "Personalisation",
       expenses: "Dépenses",
       reports: "Rapports",
-      ai: "Analyses IA",
       config: "Configuration",
       maintenance: "Maintenance"
     },
@@ -261,7 +260,6 @@ export const translations = {
       personalization: "التخصيص",
       expenses: "المصاريف",
       reports: "التقارير",
-      ai: "تحليلات الذكاء الاصطناعي",
       config: "الإعدادات",
       maintenance: "الصيانة"
     },

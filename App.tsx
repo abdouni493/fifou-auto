@@ -13,7 +13,6 @@ import { Showroom } from './components/Showroom';
 import { POS } from './components/POS';
 import { Inspection } from './components/Inspection';
 import { Dashboard } from './components/Dashboard';
-import { AIAnalysis } from './components/AIAnalysis';
 import { Config } from './components/Config';
 import { Billing } from './components/Billing';
 import { WorkerPayments } from './components/WorkerPayments';
@@ -155,8 +154,7 @@ const App: React.FC = () => {
              activeItem === 'expenses' ? <Expenses lang={lang} userName={userName || undefined} /> :
              activeItem === 'reports' ? <Reports lang={lang} /> :
              activeItem === 'billing' ? <Billing lang={lang} /> :
-             activeItem === 'worker-payments' ? <WorkerPayments lang={lang} /> :
-             activeItem === 'ai' ? <AIAnalysis lang={lang} /> : null
+             activeItem === 'worker-payments' ? <WorkerPayments lang={lang} /> : null
             }
           </div>
         </main>

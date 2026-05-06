@@ -30,7 +30,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen, lang, role, activeItem
     { id: 'billing', label: t.menu.billing, icon: '📄', roles: ['admin', 'worker'] },
     { id: 'expenses', label: t.menu.expenses, icon: '💸', roles: ['admin', 'worker'] },
     { id: 'reports', label: t.menu.reports, icon: '📈', roles: ['admin'] },
-    { id: 'ai', label: t.menu.ai, icon: '🤖', roles: ['admin'] },
   ];
 
   // Worker specific menu with payments history
