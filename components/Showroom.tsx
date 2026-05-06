@@ -108,7 +108,7 @@ export const Showroom: React.FC<ShowroomProps> = ({ lang, onNavigateToPurchase, 
             </div>
 
             <div className="h-72 overflow-hidden relative">
-               <img src={car.photos?.[0] || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1000'} className="w-full h-full object-cover" alt={car.model} />
+               <img src={car.photo_urls?.[0] || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&q=80&w=1000'} className="w-full h-full object-cover" alt={car.model} />
                {showCreatedDate && car.created_at && (
                   <div className="absolute bottom-6 left-6 bg-blue-600/90 backdrop-blur-md px-3 py-1.5 rounded-full">
                     <span className="text-[9px] font-black text-white uppercase tracking-widest">📅 {new Date(car.created_at).toLocaleDateString('fr-FR')}</span>
@@ -157,11 +157,11 @@ export const Showroom: React.FC<ShowroomProps> = ({ lang, onNavigateToPurchase, 
 
             <div className="p-8 space-y-8">
               {/* Car Images */}
-              {selectedCar.photos && selectedCar.photos.length > 0 && (
+              {selectedCar.photo_urls && selectedCar.photo_urls.length > 0 && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-black text-slate-900">Photos</h3>
                   <div className="grid grid-cols-2 gap-4">
-                    {selectedCar.photos.map((photo, idx) => (
+                    {selectedCar.photo_urls.map((photo, idx) => (
                       <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-full h-48 object-cover rounded-2xl" />
                     ))}
                   </div>

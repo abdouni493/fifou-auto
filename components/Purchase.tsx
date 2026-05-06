@@ -147,7 +147,7 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
           insuranceExpiry: p.insurance_expiry,
           techControlDate: p.tech_control_date,
           insuranceCompany: p.insurance_company,
-          photos: p.photos || [],
+          photo_urls: p.photo_urls || p.photos || [],
           totalCost: p.total_cost,
           sellingPrice: p.selling_price,
           dateAdded: p.created_at,
@@ -646,7 +646,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
               {/* SECTION 3: MÉDIA & VISUELS */}
               <Section title="Média & Visuels" icon="📸">
                  <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                    {formData.photos?.map((p, i) => (
+                    {formData.photo_urls?.map((p, i) => (
                       <div key={i} className="h-44 w-36 shrink-0 rounded-[2.5rem] border-[4px] border-white shadow-xl overflow-hidden group/img relative">
                          <img src={p} className="w-full h-full object-cover" />
                          <button onClick={() => setFormData({...formData, photo_urls: formData.photo_urls?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-7 w-7 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
