@@ -64,7 +64,7 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
   };
 
   const fetchVehicles = async () => {
-    const { data, error } = await supabase.from('purchases').select('*').order('dateAdded', { ascending: false });
+    const { data, error } = await supabase.from('purchases').select('*').order('created_at', { ascending: false });
     if (error) console.error(error);
     else setVehicles((data || []) as PurchaseRecord[]);
   };

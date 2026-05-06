@@ -3,6 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { InspectionRecord, Language, PurchaseRecord, InvoiceDesign, ElementPosition } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
+import { uploadImagesToBucket } from '../utils';
 
 interface InspectionProps {
   lang: Language;
@@ -59,7 +60,8 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
     safety: { lights: true, tires: true, brakes: true, wipers: true, mirrors: true, seatbelts: true, horn: true },
     equipment: { spareWheel: true, jack: true, triangles: true, firstAid: true, docs: true },
     comfort: { ac: true, cleanliness: true },
-    photos: { exterior: [], interior: [] },
+    exterior_photo_urls: [],
+    interior_photo_urls: [],
     note: '',
     mileage: 0
   };
@@ -138,7 +140,8 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
       equipment: formData.equipment,
       comfort: formData.comfort,
       note: formData.note || '',
-      photos: formData.photos,
+      exterior_photo_urls: formData.exterior_photo_urls,
+      interior_photo_urls: formData.interior_photo_urls,
       partner_name: formData.partnerName
     };
     try {
@@ -441,7 +444,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
              <div className="space-y-8">
                 <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-50 pb-4">Captures Médias</h4>
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
-                   {[...(viewingRecord.photos?.exterior || []), ...(viewingRecord.photos?.interior || [])].map((p, i) => (
+                   {[...(viewingRecord.exterior_photo_urls || []), ...(viewingRecord.interior_photo_urls || [])].map((p, i) => (
                      <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-50 shadow-sm">
                         <img src={p} className="h-full w-full object-cover hover:scale-110 transition-transform cursor-pointer" />
                      </div>
@@ -546,8 +549,8 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                ) : (
                  <div className="space-y-16 animate-in slide-in-from-right-6 duration-500">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-16">
-                        <MediaUploader title="Captures Extérieures" photos={formData.photos?.exterior || []} onUpdate={(p) => setFormData({...formData, photos: {...formData.photos!, exterior: p}})} />
-                        <MediaUploader title="Captures Intérieures" photos={formData.photos?.interior || []} onUpdate={(p) => setFormData({...formData, photos: {...formData.photos!, interior: p}})} />
+                        <MediaUploader title="Captures Extérieures" bucket="inspection-exterior" photos={formData.exterior_photo_urls || []} onUpdate={(p) => setFormData({...formData, exterior_photo_urls: p})} />
+                        <MediaUploader title="Captures Intérieures" bucket="inspection-interior" photos={formData.interior_photo_urls || []} onUpdate={(p) => setFormData({...formData, interior_photo_urls: p})} />
                     </div>
                  </div>
                )}
@@ -628,15 +631,16 @@ const CheckItem = ({ label, checked, accent }: any) => (
   </div>
 );
 
-const MediaUploader = ({ title, photos, onUpdate }: any) => {
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+const MediaUploader = ({ title, bucket, photos, onUpdate }: any) => {
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach(file => {
-        const reader = new FileReader();
-        reader.onloadend = () => onUpdate([...photos, reader.result as string]);
-        reader.readAsDataURL(file as File);
-      });
+    if (!files) return;
+    try {
+      const urls = await uploadImagesToBucket(bucket, Array.from(files));
+      onUpdate([...photos, ...urls]);
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert('Erreur lors du téléchargement des photos');
     }
   };
   return (

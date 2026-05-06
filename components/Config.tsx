@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Language } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
+import { uploadImageToBucket } from '../utils';
 
 interface ConfigProps {
   lang: Language;
@@ -16,7 +17,7 @@ export const Config: React.FC<ConfigProps> = ({ lang, onConfigUpdate }) => {
   
   // Showroom State
   const [showroom, setShowroom] = useState({
-    name: '', slogan: '', address: '', facebook: '', instagram: '', whatsapp: '', logo_data: ''
+    name: '', slogan: '', address: '', facebook: '', instagram: '', whatsapp: '', logo_url: ''
   });
 
   // Profile State
@@ -48,12 +49,15 @@ export const Config: React.FC<ConfigProps> = ({ lang, onConfigUpdate }) => {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setShowroom(prev => ({ ...prev, logo_data: reader.result as string }));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const url = await uploadImageToBucket('showroom-logo', file);
+      setShowroom(prev => ({ ...prev, logo_url: url }));
+    } catch (err) {
+      console.error('Logo upload failed:', err);
+      alert('Erreur lors du téléchargement du logo');
     }
   };
 
@@ -70,7 +74,7 @@ export const Config: React.FC<ConfigProps> = ({ lang, onConfigUpdate }) => {
           facebook: showroom.facebook,
           instagram: showroom.instagram,
           whatsapp: showroom.whatsapp,
-          logo_data: showroom.logo_data,
+          logo_url: showroom.logo_url,
           updated_at: new Date().toISOString()
         })
         .eq('id', 1)
@@ -91,7 +95,7 @@ export const Config: React.FC<ConfigProps> = ({ lang, onConfigUpdate }) => {
             facebook: showroom.facebook,
             instagram: showroom.instagram,
             whatsapp: showroom.whatsapp,
-            logo_data: showroom.logo_data,
+            logo_url: showroom.logo_url,
             updated_at: new Date().toISOString()
           }]);
 
@@ -201,8 +205,8 @@ export const Config: React.FC<ConfigProps> = ({ lang, onConfigUpdate }) => {
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Logo du Showroom</label>
                     <div className="relative group w-56 h-56">
                        <div className="w-full h-full rounded-[4.5rem] bg-slate-50 border-4 border-dashed border-slate-200 flex flex-col items-center justify-center overflow-hidden transition-all cursor-pointer hover:border-blue-500 group">
-                          {showroom.logo_data ? (
-                            <img src={showroom.logo_data} className="w-full h-full object-cover" />
+                          {showroom.logo_url ? (
+                            <img src={showroom.logo_url} className="w-full h-full object-cover" />
                           ) : (
                             <span className="text-5xl opacity-20">🏎️</span>
                           )}

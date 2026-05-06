@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { PurchaseRecord, Language, SaleRecord, InvoiceDesign, ElementPosition, CustomText } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
-import { getCreatedByValue } from '../utils';
+import { getCreatedByValue, uploadImageToBucket } from '../utils';
 
 interface POSProps {
   lang: Language;
@@ -436,12 +436,25 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'photo' | 'scan' | 'signature') => {
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: 'photo_url' | 'scan_url' | 'signature_url'
+  ) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData(prev => ({ ...prev, [field]: reader.result as string }));
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    const bucketMap = {
+      photo_url:     'client-photos',
+      scan_url:      'client-id-scans',
+      signature_url: 'client-signatures',
+    } as const;
+
+    try {
+      const url = await uploadImageToBucket(bucketMap[field], file);
+      setFormData(prev => ({ ...prev, [field]: url }));
+    } catch (err) {
+      console.error('File upload failed:', err);
+      alert('Erreur lors du téléchargement du fichier');
     }
   };
 
@@ -470,9 +483,9 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
       doc_number: formData.doc_number,
       issue_date: formData.issue_date || null,
       expiry_date: formData.expiry_date || null,
-      photo: formData.photo || null,
-      scan: formData.scan || null,
-      signature: formData.signature || null,
+      photo_url: formData.photo_url || null,
+      scan_url: formData.scan_url || null,
+      signature_url: formData.signature_url || null,
       total_price: totalPrice,
       amount_paid: amountPaid,
       balance: balance,
@@ -774,7 +787,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
              {inventory.map(car => (
                <button key={car.id} onClick={() => setSelectedCar(car)} className={`group relative text-left p-8 rounded-[4rem] border-4 transition-all duration-500 ${selectedCar?.id === car.id ? 'border-blue-600 bg-white shadow-2xl scale-[1.05]' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
                  <div className="aspect-[16/10] rounded-[3.5rem] overflow-hidden mb-8 border border-slate-50 relative">
-                    <img src={car.photos?.[0] || 'https://via.placeholder.com/400x250?text=AutoLux'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]" />
+                    <img src={car.photo_urls?.[0] || 'https://via.placeholder.com/400x250?text=AutoLux'} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s]" />
                  </div>
                  <h4 className="text-2xl font-black text-slate-900 tracking-tighter leading-none">{car.make} {car.model}</h4>
                  <p className="text-sm font-black text-blue-500 mt-2 uppercase tracking-widest">{car.year} • {(car.sellingPrice || car.selling_price)?.toLocaleString()} DA</p>
@@ -797,10 +810,10 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                       <div className="md:col-span-4 flex flex-col items-center">
                          <div className="relative group w-48 h-48">
                             <div className="w-full h-full rounded-[4.5rem] bg-slate-50 border-4 border-white shadow-2xl flex items-center justify-center text-7xl overflow-hidden group-hover:bg-blue-50 transition-colors">
-                               {formData.photo ? <img src={formData.photo} className="w-full h-full object-cover" /> : '👤'}
+                               {formData.photo_url ? <img src={formData.photo_url} className="w-full h-full object-cover" /> : '👤'}
                             </div>
                             <label className="absolute bottom-2 right-2 h-14 w-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-2xl transition-all">
-                               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'photo')} />
+                               <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'photo_url')} />
                                <span className="text-2xl">📷</span>
                             </label>
                          </div>
@@ -844,20 +857,20 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                       </div>
                       <div className="flex flex-col gap-6">
                         <div className="flex-grow border-4 border-dashed border-slate-100 rounded-[3.5rem] p-10 flex flex-col items-center justify-center relative group">
-                           {formData.scan ? <img src={formData.scan} className="w-full h-full object-contain" /> : (
+                           {formData.scan_url ? <img src={formData.scan_url} className="w-full h-full object-contain" /> : (
                              <div className="text-center opacity-20"><span className="text-6xl mb-4 block">📑</span><p className="text-[10px] font-black uppercase tracking-widest">Scanner ID / Permis</p></div>
                            )}
                            <label className="absolute bottom-6 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-blue-600 transition-all shadow-xl">
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'scan')} />
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'scan_url')} />
                               Importer Scan
                            </label>
                         </div>
                         <div className="h-44 border-4 border-dashed border-slate-100 rounded-[3.5rem] p-8 flex flex-col items-center justify-center relative group">
-                           {formData.signature ? <img src={formData.signature} className="w-full h-full object-contain" /> : (
+                           {formData.signature_url ? <img src={formData.signature_url} className="w-full h-full object-contain" /> : (
                              <div className="text-center opacity-20"><span className="text-4xl mb-2 block">🖋️</span><p className="text-[10px] font-black uppercase tracking-widest">Signature Client</p></div>
                            )}
                            <label className="absolute bottom-4 px-8 py-3 bg-green-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest cursor-pointer hover:bg-green-700 transition-all shadow-xl">
-                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'signature')} />
+                              <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileUpload(e, 'signature_url')} />
                               Capturer Signature
                            </label>
                         </div>

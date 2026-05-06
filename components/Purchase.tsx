@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { PurchaseRecord, Language, Supplier } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
-import { getCreatedByValue } from '../utils';
+import { getCreatedByValue, uploadImagesToBucket } from '../utils';
 import { InvoiceEditor } from './InvoiceEditor';
 
 // Print styles - CRITICAL: Only show invoice content
@@ -197,7 +197,7 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
         insurance_expiry: data.insuranceExpiry || null,
         tech_control_date: data.techControlDate || null,
         insurance_company: data.insuranceCompany || '',
-        photos: data.photos || [],
+        photo_urls: data.photo_urls || [],
         total_cost: parseFloat(data.totalCost) || 0,
         selling_price: parseFloat(data.sellingPrice) || 0,
         is_sold: data.is_sold || false,
@@ -373,7 +373,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
   const [formData, setFormData] = useState<Partial<PurchaseRecord>>(initialData || {
     supplierId: '', supplierName: '', make: '', model: '', year: new Date().getFullYear().toString(),
     color: '', vin: '', fuel: 'essence', transmission: 'manuelle', seats: 5, doors: 5, mileage: 0,
-    insuranceExpiry: '', techControlDate: '', insuranceCompany: '', photos: [], totalCost: 0, sellingPrice: 0,
+    insuranceExpiry: '', techControlDate: '', insuranceCompany: '', photo_urls: [], totalCost: 0, sellingPrice: 0,
     purchaseDateTime: new Date().toISOString().slice(0, 16),
     // Inspection checklist items
     safety: {},
@@ -552,19 +552,15 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
     setFormData(prev => ({ ...prev, supplierId: e.target.value, supplierName: s?.name || '' }));
   };
 
-  const handlePhotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      const readers = Array.from(files).map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file as File);
-        });
-      });
-      Promise.all(readers).then(results => {
-        setFormData(prev => ({ ...prev, photos: [...(prev.photos || []), ...results] }));
-      });
+    if (!files) return;
+    try {
+      const urls = await uploadImagesToBucket('vehicle-photos', Array.from(files));
+      setFormData(prev => ({ ...prev, photo_urls: [...(prev.photo_urls || []), ...urls] }));
+    } catch (err) {
+      console.error('Vehicle photo upload failed:', err);
+      alert('Erreur lors du téléchargement des photos');
     }
   };
 
@@ -653,7 +649,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                     {formData.photos?.map((p, i) => (
                       <div key={i} className="h-44 w-36 shrink-0 rounded-[2.5rem] border-[4px] border-white shadow-xl overflow-hidden group/img relative">
                          <img src={p} className="w-full h-full object-cover" />
-                         <button onClick={() => setFormData({...formData, photos: formData.photos?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-7 w-7 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
+                         <button onClick={() => setFormData({...formData, photo_urls: formData.photo_urls?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-7 w-7 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
                       </div>
                     ))}
                     <label className="h-44 w-36 shrink-0 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 hover:border-blue-500 transition-all text-blue-500">
@@ -961,11 +957,11 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
           </div>
           
           {/* Photos Gallery */}
-          {purchase.photos && purchase.photos.length > 0 && (
+          {purchase.photo_urls && purchase.photo_urls.length > 0 && (
             <div>
               <h3 className="text-lg font-black text-slate-900 mb-4">📸 Photos du Véhicule</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {purchase.photos.map((photo, idx) => (
+                {purchase.photo_urls.map((photo, idx) => (
                   <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm" />
                 ))}
               </div>

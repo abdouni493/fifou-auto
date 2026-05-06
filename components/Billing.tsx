@@ -55,7 +55,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
     facebook: '',
     instagram: '@autolux_dz',
     whatsapp: '',
-    logo_data: ''
+    logo_url: ''
   });
 
   // Payment Modal States
@@ -459,8 +459,8 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                      style={{ transform: `translate(${printDesign.logoPosition.x}px, ${printDesign.logoPosition.y}px)` }} 
                      className={`cursor-pointer transition-all ${selectedElement.type === 'logo' ? 'ring-4 ring-blue-500 ring-offset-4' : 'hover:opacity-70'}`}
                    >
-                      {showroom.logo_data ? (
-                        <img src={showroom.logo_data} className="w-24 h-24 object-contain shadow-xl rounded-[2rem]" alt="Logo" />
+                      {showroom.logo_url ? (
+                        <img src={showroom.logo_url} className="w-24 h-24 object-contain shadow-xl rounded-[2rem]" alt="Logo" />
                       ) : (
                         <div className="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center text-5xl text-white shadow-xl">🏎️</div>
                       )}

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Supplier, Language } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
+import { uploadImageToBucket, uploadImagesToBucket } from '../utils';
 
 interface SuppliersProps {
   lang: Language;
@@ -58,8 +59,8 @@ export const Suppliers: React.FC<SuppliersProps> = ({ lang }) => {
         phone2: data.phone2 || '',
         id_doc_type: data.idDocType || '',
         id_doc_number: data.idDocNumber || '',
-        id_doc_images: data.idDocImages || [],
-        photo: data.photo || null
+        id_doc_image_urls: data.id_doc_image_urls || [],
+        photo_url: data.photo_url || null
       };
 
       if (editingSupplier) {
@@ -181,7 +182,7 @@ const ProfileView: React.FC<{ supplier: Supplier; onClose: () => void }> = ({ su
       <div className="flex justify-between items-start mb-12">
         <div className="flex items-center gap-8">
           <div className="h-32 w-32 rounded-[3.5rem] bg-slate-50 border-4 border-white shadow-xl overflow-hidden flex items-center justify-center text-6xl">
-            {supplier.photo ? <img src={supplier.photo} className="w-full h-full object-cover" /> : '👤'}
+            {supplier.photo_url ? <img src={supplier.photo_url} className="w-full h-full object-cover" /> : '👤'}
           </div>
           <div>
             <h2 className="text-4xl font-black text-slate-900 tracking-tighter">{supplier.name}</h2>
@@ -260,15 +261,30 @@ const SupplierForm: React.FC<{ lang: Language, onClose: () => void, onSubmit: (d
   const [formData, setFormData] = useState<Partial<Supplier>>(initialData || {
     name: '', code: `S-${Math.random().toString(36).substring(2, 6).toUpperCase()}`, 
     dob: '', pob: '', address: '', art: '', nif: '', rc: '', nis: '', 
-    mobile: '', phone2: '', idDocType: 'CNI Biométrique', idDocNumber: '', photo: '', idDocImages: []
+    mobile: '', phone2: '', idDocType: 'CNI Biométrique', idDocNumber: '', photo_url: '', id_doc_image_urls: []
   });
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData(prev => ({ ...prev, photo: reader.result as string }));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const url = await uploadImageToBucket('supplier-photos', file);
+      setFormData(prev => ({ ...prev, photo_url: url }));
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert('Erreur lors du téléchargement de la photo');
+    }
+  };
+
+  const handleIdDocImages = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    try {
+      const urls = await uploadImagesToBucket('supplier-id-docs', files);
+      setFormData(prev => ({ ...prev, id_doc_image_urls: [...(prev.id_doc_image_urls ?? []), ...urls] }));
+    } catch (err) {
+      console.error('ID doc upload failed:', err);
+      alert('Erreur lors du téléchargement des documents');
     }
   };
 
@@ -295,7 +311,7 @@ const SupplierForm: React.FC<{ lang: Language, onClose: () => void, onSubmit: (d
             <div className="lg:w-1/3 space-y-12 flex flex-col items-center">
               <div className="relative group mt-8">
                 <div className="w-56 h-56 rounded-[4.5rem] bg-[#fcfcfc] border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-                   {formData.photo ? <img src={formData.photo} className="w-full h-full object-cover" /> : <span className="text-[8rem] opacity-5">👤</span>}
+                   {formData.photo_url ? <img src={formData.photo_url} className="w-full h-full object-cover" /> : <span className="text-[8rem] opacity-5">👤</span>}
                 </div>
                 <label className="absolute bottom-4 right-4 h-14 w-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-2xl transition-all">
                   <input type="file" className="hidden" accept="image/*" onChange={handlePhoto} />

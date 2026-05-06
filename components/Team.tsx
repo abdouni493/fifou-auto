@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Worker, Language } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
+import { uploadImageToBucket } from '../utils';
 
 interface TeamProps {
   lang: Language;
@@ -37,19 +38,33 @@ export const Team: React.FC<TeamProps> = ({ lang }) => {
     try {
       const payload = { ...data };
       delete payload.created_at;
-      
+      // Do not send or modify created_by from the client UI
+      delete payload.created_by;
+
+      // Normalize empty strings to NULL to avoid type errors (e.g. date columns)
+      Object.keys(payload).forEach((k) => {
+        const v: any = (payload as any)[k];
+        if (typeof v === 'string' && v.trim() === '') {
+          (payload as any)[k] = null;
+        }
+      });
+
+      // Ensure birthday is a valid date or null
+      if (payload.birthday) {
+        const d = new Date(payload.birthday as any);
+        if (Number.isNaN(d.getTime())) payload.birthday = null;
+      }
+
+      // Ensure numeric fields are numbers
+      if (payload.amount !== undefined && payload.amount !== null) {
+        payload.amount = Number(payload.amount) || 0;
+      }
       // Ensure role and type are in sync
       if (payload.role) {
         payload.type = payload.role.charAt(0).toUpperCase() + payload.role.slice(1);
       }
       if (payload.type) {
         payload.role = payload.type.toLowerCase();
-      }
-      
-      // Add created_by if it's a new worker
-      if (!data.id && !payload.created_by) {
-        const userName = localStorage.getItem('autolux_user_name') || 'admin';
-        payload.created_by = userName;
       }
       
       if (data.id) {
@@ -209,12 +224,10 @@ const WorkerCard = ({ worker, onAction, onDelete, onEdit, lang }: any) => {
     <div className="bg-white rounded-[3.5rem] border border-slate-50 p-8 shadow-sm hover:shadow-2xl transition-all duration-700 flex flex-col group h-full relative">
       <div className="flex flex-col items-center mb-6">
         <div className="w-28 h-28 rounded-full bg-slate-50 border-4 border-white shadow-lg overflow-hidden flex items-center justify-center mb-4">
-          {worker.photo ? <img src={worker.photo} className="w-full h-full object-cover" /> : <span className="text-5xl">👨‍🔧</span>}
+          {worker.photo_url ? <img src={worker.photo_url} className="w-full h-full object-cover" /> : <span className="text-5xl">👨‍🔧</span>}
         </div>
         <h3 className="text-2xl font-black text-[#0f172a] text-center truncate w-full mb-2">{worker.fullname}</h3>
-        {worker.created_by && (
-          <p className="text-[10px] font-black text-slate-500 uppercase mb-2">👤 Créé par: {worker.created_by}</p>
-        )}
+        {/* created_by removed from UI - auditing handled server-side */}
         <div className={`px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest flex items-center gap-2 ${getRoleColor(worker.role)}`}>
           <span className="text-lg">{getRoleEmoji(worker.role)}</span>
           {getRoleLabel(worker.role)}
@@ -253,15 +266,18 @@ const WorkerFormModal = ({ lang, initialData, onClose, onSubmit }: any) => {
   const t = translations[lang as Language];
   const [formData, setFormData] = useState<Partial<Worker>>(initialData || {
     fullname: '', birthday: '', telephone: '', email: '', address: '', id_card: '',
-    type: 'Worker', role: 'worker', payment_type: 'month', amount: 0, username: '', password: '', photo: ''
+    type: 'Worker', role: 'worker', payment_type: 'month', amount: 0, username: '', password: '', photo_url: ''
   });
 
-  const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData(prev => ({ ...prev, photo: reader.result as string }));
-      reader.readAsDataURL(file);
+    if (!file) return;
+    try {
+      const url = await uploadImageToBucket('worker-photos', file);
+      setFormData(prev => ({ ...prev, photo_url: url }));
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      alert('Erreur lors du téléchargement de la photo');
     }
   };
 
@@ -286,7 +302,7 @@ const WorkerFormModal = ({ lang, initialData, onClose, onSubmit }: any) => {
             <div className="lg:col-span-4 flex flex-col items-center">
               <div className="relative group mt-10">
                 <div className="w-56 h-56 rounded-[4.5rem] bg-white border-4 border-white shadow-xl flex items-center justify-center overflow-hidden">
-                   {formData.photo ? <img src={formData.photo} className="w-full h-full object-cover" /> : <span className="text-[8rem] opacity-5">👤</span>}
+                   {formData.photo_url ? <img src={formData.photo_url} className="w-full h-full object-cover" /> : <span className="text-[8rem] opacity-5">👤</span>}
                 </div>
                 <label className="absolute bottom-4 right-4 h-14 w-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-2xl transition-all">
                   <input type="file" className="hidden" accept="image/*" onChange={handlePhoto} />

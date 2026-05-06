@@ -62,7 +62,7 @@ export interface Supplier {
   id: string;
   name: string;
   code: string;
-  photo?: string;
+  photo_url?: string;
   dob?: string;
   pob?: string;
   address?: string;
@@ -74,7 +74,7 @@ export interface Supplier {
   art?: string;
   idDocType?: string;
   idDocNumber?: string;
-  idDocImages?: string[];
+  id_doc_image_urls?: string[];
   purchaseHistory?: {
     id: string;
     date: string;
@@ -105,9 +105,9 @@ export interface SaleRecord {
   doc_number: string;
   issue_date?: string;
   expiry_date?: string;
-  photo?: string;
-  scan?: string;
-  signature?: string;
+  photo_url?: string;
+  scan_url?: string;
+  signature_url?: string;
   total_price: number;
   amount_paid: number;
   balance: number;
@@ -135,7 +135,7 @@ export interface PurchaseRecord {
   insuranceExpiry: string;
   techControlDate: string;
   insuranceCompany: string;
-  photos: string[];
+  photo_urls: string[];
   totalCost: number;
   sellingPrice: number;
   dateAdded: string;
@@ -157,7 +157,8 @@ export interface InspectionRecord {
   equipment: any;
   comfort: any;
   note?: string;
-  photos: any;
+  exterior_photo_urls: string[];
+  interior_photo_urls: string[];
   partner_name: string;
   created_by?: string;
 }
@@ -174,7 +175,7 @@ export interface Worker {
   role?: 'admin' | 'worker' | 'driver';
   payment_type: 'month' | 'day';
   amount: number;
-  photo?: string;
+  photo_url?: string;
   username?: string;
   password?: string;
   created_at?: string;
@@ -224,4 +225,16 @@ export interface BillingRecord {
   partner: string;
   amount?: number;
   car: string;
+}
+
+export interface ShowroomConfig {
+  id: number;
+  name: string;
+  slogan: string;
+  address: string;
+  facebook: string;
+  instagram: string;
+  whatsapp: string;
+  logo_url?: string;
+  updated_at?: string;
 }

@@ -38,7 +38,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       id: 'logo',
       type: 'image',
       label: 'Logo Showroom',
-      content: showroom?.logo_data || '',
+      content: showroom?.logo_url || '',
       x: 20,
       y: 20,
       width: 80,

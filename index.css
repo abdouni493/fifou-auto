@@ -1,5 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Minimal placeholder to avoid missing-file warnings during build */
 html, body, #root {
   height: 100%;
 }
 body { margin: 0; }
+
