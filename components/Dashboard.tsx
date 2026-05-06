@@ -31,8 +31,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const { data: sales } = await supabase.from('sales').select('total_price, amount_paid, balance, car_id, created_at, first_name, last_name');
-      const { data: purchases } = await supabase.from('purchases').select('*');
+      const { data: sales, error: salesError } = await supabase.from('sales').select('total_price, amount_paid, balance, car_id, created_at, first_name, last_name');
+      const { data: purchases, error: purchasesError } = await supabase.from('purchases').select('*');
+      
+      if (salesError) console.warn('Sales fetch error:', salesError);
+      if (purchasesError) console.warn('Purchases fetch error:', purchasesError);
       
       let rev = 0, debt = 0, gain = 0;
       sales?.forEach(s => {
@@ -45,14 +48,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
       const inStock = purchases?.filter(p => !p.is_sold) || [];
       const stockVal = inStock.reduce((acc, curr) => acc + (Number(curr.sellingPrice) || 0), 0);
 
-      const { data: exp } = await supabase.from('expenses').select('cost');
+      const { data: exp, error: expError } = await supabase.from('expenses').select('cost');
+      if (expError) console.warn('Expenses fetch error:', expError);
       const totalExp = exp?.reduce((acc, curr) => acc + Number(curr.cost), 0) || 0;
 
-      const { data: trans } = await supabase.from('worker_transactions').select('amount, type');
+      const { data: trans, error: transError } = await supabase.from('worker_transactions').select('amount, type');
+      if (transError) console.warn('Transactions fetch error:', transError);
       const totalSalaries = trans?.filter(tr => tr.type === 'paiement').reduce((acc, curr) => acc + Number(curr.amount), 0) || 0;
 
-      const { data: suppliers } = await supabase.from('suppliers').select('id');
-      const { data: insp } = await supabase.from('inspections').select('id');
+      const { data: suppliers, error: suppError } = await supabase.from('suppliers').select('id');
+      if (suppError) console.warn('Suppliers fetch error:', suppError);
+      
+      const { data: insp, error: inspError } = await supabase.from('inspections').select('id');
+      if (inspError) console.warn('Inspections fetch error:', inspError);
 
       setStats({
         revenue: rev,
@@ -74,7 +82,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
       setRecentActivity(activities);
 
     } catch (err) {
-      console.error(err);
+      console.error('Dashboard data fetch error:', err);
     } finally {
       setLoading(false);
     }

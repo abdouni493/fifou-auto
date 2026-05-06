@@ -38,8 +38,16 @@ const App: React.FC = () => {
   }, [lang]);
 
   const fetchGlobalConfig = async () => {
-    const { data } = await supabase.from('showroom_config').select('*').eq('id', 1).maybeSingle();
-    if (data) setShowroomConfig(data);
+    try {
+      const { data, error } = await supabase.from('showroom_config').select('*').eq('id', 1).maybeSingle();
+      if (error) {
+        console.error('Error fetching showroom config:', error);
+        return;
+      }
+      if (data) setShowroomConfig(data);
+    } catch (err) {
+      console.error('Failed to fetch showroom config:', err);
+    }
   };
 
   useEffect(() => {
@@ -47,7 +55,11 @@ const App: React.FC = () => {
     const checkAuth = async () => {
       try {
         // Get current session immediately
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.warn('Session error (this is normal on first load):', sessionError.message);
+        }
         
         // Set userId from session
         if (session?.user) {
@@ -68,18 +80,36 @@ const App: React.FC = () => {
           return;
         }
 
-        // If no saved role, fetch from profiles
+        // If no saved role, fetch from profiles with error handling
         if (session?.user) {
-          const { data: profile } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
-          const userRole = (profile?.role as Role) || 'admin';
-          setRole(userRole);
-          localStorage.setItem('autolux_role', userRole);
+          try {
+            const { data: profile, error: profileError } = await supabase.from('profiles').select('role').eq('id', session.user.id).maybeSingle();
+            if (profileError) {
+              console.warn('Profile fetch error:', profileError.message);
+              setRole('admin');
+              localStorage.setItem('autolux_role', 'admin');
+            } else {
+              const userRole = (profile?.role as Role) || 'admin';
+              setRole(userRole);
+              localStorage.setItem('autolux_role', userRole);
+            }
+          } catch (profileErr) {
+            console.error('Profile fetch failed:', profileErr);
+            setRole('admin');
+            localStorage.setItem('autolux_role', 'admin');
+          }
         } else {
           setRole(null);
         }
       } catch (err) {
         console.error('Auth check error:', err);
-        setRole(null);
+        // Try to use saved role as fallback
+        const savedRole = localStorage.getItem('autolux_role');
+        if (savedRole) {
+          setRole(savedRole as Role);
+        } else {
+          setRole(null);
+        }
       } finally {
         setIsInitializing(false);
       }
