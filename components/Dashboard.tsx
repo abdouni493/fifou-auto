@@ -95,8 +95,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
     </div>
   );
 
-  const netBilan = stats.profit - stats.expenses - stats.teamCost;
-  const profitMargin = stats.revenue > 0 ? (stats.profit / stats.revenue) * 100 : 0;
+  // Ensure all stats are valid numbers (not NaN)
+  const ensureNumber = (val: any): number => {
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const revenue = ensureNumber(stats.revenue);
+  const profit = ensureNumber(stats.profit);
+  const expenses = ensureNumber(stats.expenses);
+  const teamCost = ensureNumber(stats.teamCost);
+  
+  const netBilan = profit - expenses - teamCost;
+  const profitMargin = revenue > 0 ? (profit / revenue) * 100 : 0;
 
   return (
     <div className="space-y-12 animate-in fade-in slide-in-from-bottom-6 duration-1000">
@@ -116,7 +127,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
                     </div>
                     <div className="flex items-baseline gap-4">
                        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter">
-                          {netBilan.toLocaleString()}
+                          {isNaN(netBilan) ? '0' : netBilan.toLocaleString()}
                        </h1>
                        <span className="text-3xl font-black text-blue-600">DA</span>
                     </div>
@@ -124,7 +135,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ lang }) => {
 
                  <div className="bg-emerald-50 border border-emerald-100 px-8 py-4 rounded-[2.5rem] flex flex-col items-center">
                     <p className="text-[10px] font-black uppercase text-emerald-600 tracking-widest mb-1">Marge Brut 📈</p>
-                    <p className="text-3xl font-black text-emerald-700 tracking-tight">{profitMargin.toFixed(1)}%</p>
+                    <p className="text-3xl font-black text-emerald-700 tracking-tight">{isNaN(profitMargin) ? '0' : profitMargin.toFixed(1)}%</p>
                  </div>
               </div>
 
@@ -193,6 +204,9 @@ const HeroCard = ({ label, value, emoji, color }: any) => {
     rose: 'bg-rose-50 text-rose-600',
     amber: 'bg-amber-50 text-amber-600'
   };
+  const numValue = Number(value);
+  const displayValue = isNaN(numValue) ? 0 : numValue;
+  
   return (
     <div className="bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100 flex flex-col group hover:bg-white hover:shadow-xl hover:border-blue-100 transition-all duration-500">
        <div className={`h-12 w-12 rounded-2xl ${colorMap[color]} flex items-center justify-center text-xl mb-6 shadow-sm group-hover:scale-110 transition-transform`}>
@@ -200,7 +214,7 @@ const HeroCard = ({ label, value, emoji, color }: any) => {
        </div>
        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
        <p className="text-2xl font-black text-slate-900 tracking-tighter">
-          {value.toLocaleString()} <span className="text-xs font-bold opacity-30">DA</span>
+          {displayValue.toLocaleString()} <span className="text-xs font-bold opacity-30">DA</span>
        </p>
     </div>
   );
@@ -212,6 +226,9 @@ const CompactStat = ({ icon, label, value, color }: any) => {
     indigo: 'text-indigo-600 bg-indigo-50 border-indigo-100',
     amber: 'text-amber-600 bg-amber-50 border-amber-100'
   };
+  const numValue = Number(value);
+  const displayValue = isNaN(numValue) ? 0 : numValue;
+  
   return (
     <div className="bg-white p-8 rounded-[3rem] border border-slate-100 flex items-center gap-6 shadow-sm group hover:shadow-xl transition-all">
        <div className={`h-16 w-16 rounded-2xl flex items-center justify-center text-3xl shadow-sm group-hover:scale-110 transition-transform ${colors[color]}`}>
@@ -219,7 +236,7 @@ const CompactStat = ({ icon, label, value, color }: any) => {
        </div>
        <div>
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-          <p className="text-3xl font-black text-slate-900 tracking-tighter">{value}</p>
+          <p className="text-3xl font-black text-slate-900 tracking-tighter">{displayValue}</p>
        </div>
     </div>
   );
