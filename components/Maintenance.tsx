@@ -35,10 +35,10 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
   return (
     <div className="space-y-10">
       {/* Premium Header */}
-      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-100 pb-8">
+      <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-red-600/20 pb-8">
         <div>
-           <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none">{t.maintenance.title}</h2>
-           <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
+           <h2 className="text-4xl font-black text-red-100 tracking-tight leading-none">{t.maintenance.title}</h2>
+           <p className="text-red-400/70 font-bold text-xs uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
              <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
              Suivi Technique & Administratif
            </p>
@@ -47,7 +47,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
           onClick={() => { setEditingRecord(null); setIsFormOpen(true); }} 
           className="group custom-gradient-btn px-10 py-5 rounded-[2.5rem] text-white font-black text-sm shadow-2xl transition-all active:scale-95 flex items-center gap-4"
         >
-           <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center group-hover:rotate-90 transition-transform duration-500">
+           <div className="h-8 w-8 rounded-full bg-red-600/20 flex items-center justify-center group-hover:rotate-90 transition-transform duration-500">
              <span className="text-xl">🔧</span>
            </div>
            {t.maintenance.add}
@@ -57,7 +57,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
       {/* Modern Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
         {records.map(r => (
-          <div key={r.id} className="bg-white rounded-[4rem] border border-slate-100 p-10 shadow-sm hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.06)] transition-all duration-700 group relative flex flex-col overflow-hidden h-full">
+          <div key={r.id} className="glass-card rounded-[4rem] border border-red-600/20 p-10 shadow-sm hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.06)] transition-all duration-700 group relative flex flex-col overflow-hidden h-full">
             <div className={`absolute top-0 right-0 w-48 h-48 rounded-full -mr-24 -mt-24 transition-colors duration-700 opacity-20 ${
                r.type === 'vidange' ? 'bg-amber-500' : 
                r.type === 'assurance' ? 'bg-purple-500' : 
@@ -70,20 +70,20 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
                  <div className={`h-20 w-20 rounded-[2.2rem] flex items-center justify-center text-4xl transition-all duration-700 shadow-inner group-hover:scale-110 group-hover:rotate-6 ${
                    r.type === 'vidange' ? 'bg-amber-50 text-amber-500' : 
                    r.type === 'assurance' ? 'bg-purple-50 text-purple-500' : 
-                   r.type === 'controle' ? 'bg-blue-50 text-blue-500' : 
-                   'bg-slate-100 text-slate-500'
+                   r.type === 'controle' ? 'bg-blue-50 text-red-600' : 
+                   'bg-red-950/30 text-red-400/70'
                  }`}>
                     {r.type === 'vidange' ? '🛢️' : r.type === 'assurance' ? '🛡️' : r.type === 'controle' ? '🔍' : '⚙️'}
                  </div>
                  <div className="flex flex-col flex-grow">
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tight leading-tight group-hover:text-blue-600 transition-colors">{r.vehicleName}</h3>
+                    <h3 className="text-2xl font-black text-red-100 tracking-tight leading-tight group-hover:text-red-400 transition-colors">{r.vehicleName}</h3>
                     {r.created_by && (
-                      <p className="text-[9px] font-black text-slate-500 uppercase mt-1">👤 Créé par: {r.created_by}</p>
+                      <p className="text-[9px] font-black text-red-400/70 uppercase mt-1">👤 Créé par: {r.created_by}</p>
                     )}
                     <span className={`text-[10px] font-black uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2 ${
                       r.type === 'assurance' ? 'text-purple-500' : 
                       r.type === 'vidange' ? 'text-amber-500' : 
-                      'text-blue-500'
+                      'text-red-600'
                     }`}>
                       <span className="h-1 w-3 rounded-full bg-current"></span>
                       {t.maintenance[r.type]}
@@ -92,20 +92,20 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
               </div>
             </div>
 
-            <div className="bg-slate-50/50 p-8 rounded-[3rem] border border-slate-100/50 mb-10 flex-grow space-y-6 relative z-10 group-hover:bg-white group-hover:border-slate-100 transition-all duration-700">
+            <div className="bg-slate-50/50 p-8 rounded-[3rem] border border-red-600/20/50 mb-10 flex-grow space-y-6 relative z-10 group-hover:bg-white group-hover:border-red-600/20 transition-all duration-700">
                <div>
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Détail de l'opération</p>
-                 <p className="text-base font-bold text-slate-800 leading-snug">{r.name}</p>
+                 <p className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.2em] mb-2">Détail de l'opération</p>
+                 <p className="text-base font-bold text-red-100 leading-snug">{r.name}</p>
                </div>
                
                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Coût</p>
+                  <div className="bg-white p-4 rounded-2xl border border-red-600/20">
+                    <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Coût</p>
                     <p className="text-xl font-black text-red-600 tracking-tighter">{r.cost.toLocaleString()} <span className="text-[10px] font-bold">{t.currency}</span></p>
                   </div>
-                  <div className="bg-white p-4 rounded-2xl border border-slate-100">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Effectué le</p>
-                    <p className="text-sm font-black text-slate-800">{r.date}</p>
+                  <div className="bg-white p-4 rounded-2xl border border-red-600/20">
+                    <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Effectué le</p>
+                    <p className="text-sm font-black text-red-100">{r.date}</p>
                   </div>
                </div>
 
@@ -122,7 +122,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
                )}
 
                {r.note && (
-                 <div className="pt-6 border-t border-slate-200/50 text-xs text-slate-500 italic font-medium leading-relaxed">
+                 <div className="pt-6 border-t border-red-600/30/50 text-xs text-red-400/70 italic font-medium leading-relaxed">
                    "{r.note}"
                  </div>
                )}
@@ -152,7 +152,7 @@ export const Maintenance: React.FC<MaintenanceProps> = ({ lang }) => {
                <span className="text-9xl relative grayscale">⚙️</span>
             </div>
             <h3 className="text-2xl font-black text-slate-300 italic tracking-tight">Aucun enregistrement trouvé</h3>
-            <p className="text-slate-400 text-sm mt-2 max-w-xs mx-auto">Commencez par ajouter une nouvelle opération de maintenance pour vos véhicules.</p>
+            <p className="text-red-400/70 text-sm mt-2 max-w-xs mx-auto">Commencez par ajouter une nouvelle opération de maintenance pour vos véhicules.</p>
           </div>
         )}
       </div>
@@ -208,33 +208,33 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xl animate-in fade-in duration-500" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-2xl max-h-[95vh] overflow-hidden rounded-[4.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] flex flex-col animate-in zoom-in-95 duration-500">
+      <div className="relative glass-card w-full max-w-2xl max-h-[95vh] overflow-hidden rounded-[4.5rem] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.25)] flex flex-col animate-in zoom-in-95 duration-500">
         
         {/* Modal Header */}
-        <div className="p-12 border-b border-slate-100 flex justify-between items-center bg-gradient-to-br from-slate-50 to-white relative">
+        <div className="p-12 border-b border-red-600/20 flex justify-between items-center bg-gradient-to-br from-slate-50 to-white relative">
            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/5 rounded-full -mr-24 -mt-24"></div>
            <div className="flex items-center gap-8 relative z-10">
              <div className="h-16 w-16 rounded-[2rem] bg-slate-900 text-white flex items-center justify-center text-3xl shadow-2xl shadow-slate-900/30">
                {formData.type === 'vidange' ? '🛢️' : formData.type === 'assurance' ? '🛡️' : '🔧'}
              </div>
              <div>
-               <h3 className="text-4xl font-black text-slate-900 tracking-tighter leading-none mb-2">
+               <h3 className="text-4xl font-black text-red-100 tracking-tighter leading-none mb-2">
                  {initialData ? t.actions.edit : "Nouvelle Entrée"}
                </h3>
-               <p className="text-[11px] font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-2">
+               <p className="text-[11px] font-black text-red-400 uppercase tracking-[0.3em] flex items-center gap-2">
                  <span className="h-2 w-2 rounded-full bg-blue-500"></span>
                  Détails Techniques du Véhicule
                </p>
              </div>
            </div>
-           <button onClick={onClose} className="p-5 bg-white border border-slate-200 rounded-[2rem] hover:bg-red-50 hover:text-red-500 transition-all relative z-10 text-2xl shadow-sm active:scale-90">✕</button>
+           <button onClick={onClose} className="p-5 bg-white border border-red-600/30 rounded-[2rem] hover:bg-red-600/20 hover:text-red-500 transition-all relative z-10 text-2xl shadow-sm active:scale-90">✕</button>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); onSubmit(formData); }} className="flex-grow overflow-y-auto p-12 md:p-16 space-y-12 custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
             {/* Vehicle Selection */}
             <div className="md:col-span-2 space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Sélection du Véhicule</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">Sélection du Véhicule</label>
               <div className="relative group">
                 <span className="absolute left-7 top-1/2 -translate-y-1/2 text-3xl opacity-40 group-focus-within:opacity-100 group-focus-within:scale-110 transition-all duration-500">🏎️</span>
                 <input 
@@ -242,7 +242,7 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
                   value={formData.vehicleName} 
                   onChange={e => setFormData({ ...formData, vehicleName: e.target.value })} 
                   required 
-                  className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 pl-20 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 font-bold text-xl text-slate-800 transition-all shadow-inner" 
+                  className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 pl-20 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-red-600 font-bold text-xl text-red-100 transition-all shadow-inner" 
                   placeholder="Rechercher ou saisir un véhicule..."
                 />
               </div>
@@ -250,12 +250,12 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
 
             {/* Category Type */}
             <div className="space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">{t.maintenance.type}</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">{t.maintenance.type}</label>
               <div className="relative">
                 <select 
                   value={formData.type} 
                   onChange={e => handleTypeChange(e.target.value as any)} 
-                  className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 rounded-[2.5rem] outline-none focus:border-blue-500 font-bold text-lg text-slate-800 transition-all appearance-none shadow-inner"
+                  className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600 font-bold text-lg text-red-100 transition-all appearance-none shadow-inner"
                 >
                   <option value="vidange">{t.maintenance.vidange}</option>
                   <option value="assurance">{t.maintenance.assurance}</option>
@@ -268,47 +268,47 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
 
             {/* Name Input */}
             <div className="space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Intitulé Précis</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">Intitulé Précis</label>
               <input 
                 type="text" 
                 value={formData.name} 
                 onChange={e => setFormData({ ...formData, name: e.target.value })} 
                 required 
                 placeholder={formData.type === 'other' ? "Nom de l'opération..." : ""}
-                className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 rounded-[2.5rem] outline-none focus:border-blue-500 font-bold text-lg text-slate-800 transition-all shadow-inner" 
+                className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600 font-bold text-lg text-red-100 transition-all shadow-inner" 
               />
             </div>
 
             {/* Financials & Dates */}
             <div className="space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">{t.expenses.cost}</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">{t.expenses.cost}</label>
               <div className="relative">
                 <input 
                   type="number" 
                   value={formData.cost} 
                   onChange={e => setFormData({ ...formData, cost: Number(e.target.value) })} 
                   required 
-                  className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 rounded-[2.5rem] outline-none focus:border-blue-500 font-bold text-lg text-slate-800 transition-all shadow-inner" 
+                  className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600 font-bold text-lg text-red-100 transition-all shadow-inner" 
                 />
-                <span className="absolute right-8 top-1/2 -translate-y-1/2 text-slate-400 font-black text-xs uppercase">{t.currency}</span>
+                <span className="absolute right-8 top-1/2 -translate-y-1/2 text-red-400/70 font-black text-xs uppercase">{t.currency}</span>
               </div>
             </div>
 
             <div className="space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Date d'Opération</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">Date d'Opération</label>
               <input 
                 type="date" 
                 value={formData.date} 
                 onChange={e => setFormData({ ...formData, date: e.target.value })} 
                 required 
-                className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 rounded-[2.5rem] outline-none focus:border-blue-500 font-bold text-lg text-slate-800 transition-all shadow-inner" 
+                className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600 font-bold text-lg text-red-100 transition-all shadow-inner" 
               />
             </div>
 
             {/* Dynamic Expiry Field */}
             {showExpiry && (
               <div className="md:col-span-2 space-y-4 animate-in slide-in-from-top-6 duration-700">
-                <label className="block text-xs font-black text-blue-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
+                <label className="block text-xs font-black text-red-600 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
                   <span className="h-2 w-4 rounded-full bg-blue-500"></span>
                   {t.maintenance.expiry}
                 </label>
@@ -318,7 +318,7 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
                     type="date" 
                     value={formData.expiryDate} 
                     onChange={e => setFormData({ ...formData, expiryDate: e.target.value })} 
-                    className="w-full bg-blue-50/20 border-2 border-blue-100 px-8 py-6 pl-20 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-blue-500/10 focus:border-blue-500 font-bold text-lg text-slate-800 transition-all shadow-sm" 
+                    className="w-full bg-blue-50/20 border-2 border-red-600/30 px-8 py-6 pl-20 rounded-[2.5rem] outline-none focus:ring-8 focus:ring-blue-500/10 focus:border-red-600 font-bold text-lg text-red-100 transition-all shadow-sm" 
                   />
                 </div>
               </div>
@@ -326,23 +326,23 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
 
             {/* Note Area */}
             <div className="md:col-span-2 space-y-4">
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">{t.maintenance.note}</label>
+              <label className="block text-xs font-black text-red-400/70 uppercase tracking-[0.3em] ml-2">{t.maintenance.note}</label>
               <textarea 
                 value={formData.note} 
                 onChange={e => setFormData({ ...formData, note: e.target.value })} 
                 placeholder="Pièces remplacées, nom du garage, observations..."
-                className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-6 rounded-[3rem] outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500 font-bold text-lg text-slate-800 transition-all shadow-inner min-h-[160px] custom-scrollbar" 
+                className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-6 rounded-[3rem] outline-none focus:ring-8 focus:ring-blue-500/5 focus:border-red-600 font-bold text-lg text-red-100 transition-all shadow-inner min-h-[160px] custom-scrollbar" 
               />
             </div>
           </div>
         </form>
 
         {/* Modal Actions */}
-        <div className="p-12 border-t border-slate-100 bg-slate-50/50 flex justify-end gap-6 relative">
+        <div className="p-12 border-t border-red-600/20 bg-slate-50/50 flex justify-end gap-6 relative">
           <button 
             type="button" 
             onClick={onClose} 
-            className="px-12 py-6 rounded-[2.5rem] text-slate-400 font-black uppercase text-xs tracking-[0.2em] hover:bg-white transition-all border border-transparent hover:border-slate-200"
+            className="px-12 py-6 rounded-[2.5rem] text-red-400/70 font-black uppercase text-xs tracking-[0.2em] hover:bg-white transition-all border border-transparent hover:border-red-600/30"
           >
             {t.actions.cancel}
           </button>
@@ -358,3 +358,5 @@ const MaintenanceForm: React.FC<{ lang: Language; onClose: () => void; onSubmit:
     </div>
   );
 };
+
+

@@ -10,14 +10,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
-    flowType: 'pkce',
+    autoRefreshToken: true,
+    detectSessionInUrl: false,  // speeds up initial load
+    storageKey: 'autolux_session'
+  },
+  realtime: {
+    params: { eventsPerSecond: 2 }  // reduce realtime overhead
   },
   global: {
     headers: {
       'X-Client-Info': 'autolux-web',
+      'x-client-info': 'autolux-showroom/1.0'
     },
   },
 });

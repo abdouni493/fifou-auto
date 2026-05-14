@@ -1,0 +1,49 @@
+## 🔧 Fix for 400 Error on Workers Insert
+
+### The Problem
+```
+POST https://ievdekuapysvmiuiadum.supabase.co/rest/v1/workers 400 (Bad Request)
+```
+
+This happens when the trigger tries to create a worker record after signup.
+
+### Solution (2 Steps)
+
+#### Step 1: Run New SQL Script (CRITICAL)
+1. Go to **Supabase Dashboard → SQL Editor**
+2. Open [FIX_AUTH_TRIGGER_400_ERROR.sql](FIX_AUTH_TRIGGER_400_ERROR.sql)
+3. Copy **ALL** the SQL code
+4. Create new query in Supabase
+5. Paste and click **Run**
+
+This will:
+- Fix the trigger function
+- Create proper RLS policies
+- Enable error handling for worker insert
+- Re-enable RLS safely
+
+#### Step 2: Test It
+1. Refresh the app (F5)
+2. Clear browser cache (Ctrl+Shift+Delete)
+3. Go to login page
+4. Try "Setup Admin" → Create account
+5. Should work without 400 error
+
+### What We Fixed
+- ✅ Updated trigger with better error handling
+- ✅ Fixed RLS policies for authenticated access
+- ✅ Added fallback in Login if worker record missing
+- ✅ Added fallback in App if worker record missing
+- ✅ Handle case where insert fails gracefully
+
+### Files Modified
+- ✅ FIX_AUTH_TRIGGER_400_ERROR.sql (new, simplified SQL)
+- ✅ components/Login.tsx (better error handling)
+- ✅ App.tsx (better session handling)
+
+### If Still Getting 400 Error
+1. Check Supabase logs for the exact error
+2. Verify workers table has these columns:
+   - id, email, fullname, username, role, type, amount, payment_type, phone, address, permissions
+3. Run the SQL script again
+4. Clear cache and try fresh browser session

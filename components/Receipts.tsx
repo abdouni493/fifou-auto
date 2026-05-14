@@ -9,6 +9,7 @@ interface Receipt {
   receipt_date: string;
   note?: string;
   created_at: string;
+  created_by?: string;
 }
 
 interface ReceiptsProps {
@@ -17,24 +18,12 @@ interface ReceiptsProps {
   userId?: string;
 }
 
-const receiptPrintStyles = `
-  @media print {
-    body > * { display: none !important; }
-    #receipt-print { display: block !important; }
-  }
-`;
-
 export const Receipts: React.FC<ReceiptsProps> = ({ lang, showroom, userId }) => {
   const t = translations[lang];
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    receipt_date: new Date().toISOString().split('T')[0],
-    note: ''
-  });
+  const [editingRecord, setEditingRecord] = useState<Receipt | null>(null);
 
   useEffect(() => {
     fetchReceipts();
@@ -49,7 +38,6 @@ export const Receipts: React.FC<ReceiptsProps> = ({ lang, showroom, userId }) =>
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-
       setReceipts(data || []);
     } catch (error) {
       console.error('Error fetching receipts:', error);
@@ -58,58 +46,43 @@ export const Receipts: React.FC<ReceiptsProps> = ({ lang, showroom, userId }) =>
     }
   };
 
-  const handleCreateOrUpdate = async () => {
-    if (!formData.name || !formData.receipt_date) {
-      alert('Name and date are required');
-      return;
-    }
-
+  const handleSave = async (data: any) => {
     try {
-      if (editingId) {
+      if (editingRecord) {
         const { error } = await supabase
           .from('receipts')
           .update({
-            name: formData.name,
-            receipt_date: formData.receipt_date,
-            note: formData.note || null
+            name: data.name,
+            receipt_date: data.receipt_date,
+            note: data.note || null
           })
-          .eq('id', editingId);
+          .eq('id', editingRecord.id);
 
         if (error) throw error;
-        setEditingId(null);
       } else {
         const { error } = await supabase
           .from('receipts')
           .insert({
-            name: formData.name,
-            receipt_date: formData.receipt_date,
-            note: formData.note || null
+            name: data.name,
+            receipt_date: data.receipt_date,
+            note: data.note || null,
+            created_by: userId || 'system'
           });
 
         if (error) throw error;
       }
 
-      setFormData({ name: '', receipt_date: new Date().toISOString().split('T')[0], note: '' });
       setShowForm(false);
+      setEditingRecord(null);
       await fetchReceipts();
     } catch (error) {
       console.error('Error saving receipt:', error);
-      alert('Error saving receipt: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Error saving receipt');
     }
   };
 
-  const handleEdit = (receipt: Receipt) => {
-    setFormData({
-      name: receipt.name,
-      receipt_date: receipt.receipt_date,
-      note: receipt.note || ''
-    });
-    setEditingId(receipt.id);
-    setShowForm(true);
-  };
-
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this receipt?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce reçu ?')) return;
 
     try {
       const { error } = await supabase.from('receipts').delete().eq('id', id);
@@ -239,142 +212,312 @@ export const Receipts: React.FC<ReceiptsProps> = ({ lang, showroom, userId }) =>
   };
 
   return (
-    <div className="space-y-10">
-      {/* Header */}
-      <div className="flex justify-between items-end border-b border-slate-100 pb-8">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900">📄 Reçus</h2>
-          <p className="text-slate-400 font-bold text-xs uppercase mt-3">Gestion et Impression des Reçus</p>
-        </div>
-        <button
-          onClick={() => {
-            setShowForm(!showForm);
-            setEditingId(null);
-            setFormData({ name: '', receipt_date: new Date().toISOString().split('T')[0], note: '' });
-          }}
-          className="custom-gradient-btn px-10 py-5 rounded-[2.5rem] text-white font-black text-sm"
-        >
-          ✚ Créer un Reçu
-        </button>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative min-h-screen">
+      {/* Premium background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-black via-slate-950 to-black pointer-events-none -z-20"></div>
+      
+      {/* Ambient background blobs */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-red-800 rounded-full blur-[150px] opacity-[0.08] animate-blob pointer-events-none -z-10"></div>
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-red-700 rounded-full blur-[140px] opacity-[0.07] animate-blob pointer-events-none -z-10" style={{ animationDelay: '2s' }}></div>
+      
+      {/* Subtle grid overlay */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(220,38,38,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none -z-10"></div>
 
-      {/* Form Section */}
-      {showForm && (
-        <div className="bg-white rounded-[3rem] border border-slate-100 shadow-sm p-8">
-          <h3 className="text-2xl font-black text-slate-900 mb-6 flex items-center gap-3">
-            {editingId ? '✏️ Modifier Reçu' : '✚ Nouveau Reçu'}
-          </h3>
+      {/* HEADER SECTION */}
+      <div className="bg-gradient-to-br from-red-950 via-slate-900 to-black rounded-[3rem] p-10 md:p-16 text-white shadow-[0_0_80px_rgba(220,38,38,0.3)] overflow-hidden relative border border-red-600/40">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(220,38,38,0.1)_0%,transparent_50%)]"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600 rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div>
+            <h1 className="text-5xl md:text-7xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-red-400 to-red-600 tracking-tight mb-3">
+              📄 Reçus
+            </h1>
+            <p className="text-red-400/80 font-black text-sm uppercase tracking-[0.2em]">
+              Gestion et Impression des Reçus • {receipts.length} Document{receipts.length !== 1 ? 's' : ''}
+            </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Nom du Reçu *</label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-slate-900 placeholder-slate-400"
-                placeholder="ex: Reçu Facture #001"
-              />
+          <button 
+            onClick={() => { setEditingRecord(null); setShowForm(true); }} 
+            className="group relative px-10 py-5 rounded-2xl overflow-hidden font-black uppercase tracking-widest text-xs transition-all duration-300 active:scale-95 shadow-xl"
+          >
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            
+            {/* Dynamic shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            
+            {/* Enhanced glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-700 via-red-500 to-red-700 rounded-2xl blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300 -z-10 group-hover:animate-pulse"></div>
+            
+            {/* Content */}
+            <div className="relative z-10 flex items-center justify-center gap-3 text-white">
+              <span className="transition-all duration-300 group-hover:scale-125 group-hover:animate-bounce">➕</span>
+              <span className="transition-all duration-300 group-hover:tracking-[0.2em]">Créer un Reçu</span>
             </div>
-            <div>
-              <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Date *</label>
-              <input
-                type="date"
-                value={formData.receipt_date}
-                onChange={(e) => setFormData({ ...formData, receipt_date: e.target.value })}
-                className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-slate-900"
-              />
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Note (Optionnel)</label>
-            <textarea
-              value={formData.note}
-              onChange={(e) => setFormData({ ...formData, note: e.target.value })}
-              className="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 font-bold text-slate-900 placeholder-slate-400 resize-none"
-              placeholder="Ajouter une note..."
-              rows={3}
-            />
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handleCreateOrUpdate}
-              className="custom-gradient-btn px-8 py-3 rounded-2xl text-white font-black text-sm uppercase tracking-widest hover:shadow-lg transition-all"
-            >
-              {editingId ? '💾 Mettre à Jour' : '✚ Créer'}
-            </button>
-            <button
-              onClick={() => {
-                setShowForm(false);
-                setEditingId(null);
-                setFormData({ name: '', receipt_date: new Date().toISOString().split('T')[0], note: '' });
-              }}
-              className="px-8 py-3 rounded-2xl bg-slate-100 text-slate-900 font-black text-sm uppercase tracking-widest hover:bg-slate-200 transition-all"
-            >
-              ✕ Annuler
-            </button>
-          </div>
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Receipts Grid */}
       {loading ? (
-        <div className="text-center py-20 animate-pulse font-black text-blue-500">CHARGEMENT DES REÇUS...</div>
+        <div className="flex flex-col items-center justify-center py-40">
+          <div className="h-16 w-16 border-4 border-red-600/30 border-t-red-600 rounded-full animate-spin"></div>
+          <p className="mt-6 font-bold text-red-400/60 uppercase tracking-widest text-xs">Chargement des reçus...</p>
+        </div>
       ) : receipts.length === 0 ? (
-        <div className="text-center py-20 bg-slate-50 rounded-[3rem] border border-slate-100">
-          <p className="text-slate-400 font-black text-lg">📭 Aucun Reçu Créé</p>
-          <p className="text-slate-500 text-sm mt-2">Cliquez sur "✚ Créer un Reçu" pour en ajouter un</p>
+        <div className="glass-card rounded-[3rem] p-24 text-center border border-red-600/30 bg-gradient-to-b from-red-600/5 to-transparent">
+          <div className="text-8xl mb-6 opacity-40 animate-bounce">📭</div>
+          <p className="text-red-400/70 font-black text-xl uppercase tracking-[0.2em]">Aucun Reçu Trouvé</p>
+          <p className="text-red-500/40 font-bold text-xs mt-4 uppercase tracking-widest">Commencez par créer votre premier document</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {receipts.map((receipt) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {receipts.map((receipt, idx) => (
             <div
               key={receipt.id}
-              className="bg-white rounded-[3rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 p-6 flex flex-col h-full"
+              className="glass-card rounded-[2.5rem] border border-red-600/40 p-8 shadow-xl shadow-red-600/5 hover:shadow-2xl hover:shadow-red-600/20 hover:scale-105 hover:-translate-y-2 transition-all duration-500 flex flex-col group h-full relative overflow-hidden"
+              style={{ animationDelay: `${idx * 50}ms` }}
             >
-              {/* Receipt Header */}
-              <div className="mb-4 pb-4 border-b border-slate-100">
-                <h3 className="text-xl font-black text-slate-900 truncate">{receipt.name}</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">
-                  📅 {new Date(receipt.receipt_date).toLocaleDateString('fr-FR')}
-                </p>
+              <div className="absolute inset-0 bg-gradient-to-br from-red-600/5 to-transparent pointer-events-none"></div>
+              
+              <div className="relative z-10 mb-8">
+                <h3 className="text-2xl font-black text-red-100 leading-tight tracking-tight group-hover:text-red-400 transition-colors">
+                  {receipt.name}
+                </h3>
+                {receipt.created_by && (
+                  <div className="flex items-center gap-2 mt-3">
+                    <span className="text-[10px] bg-red-600/20 text-red-400 px-3 py-1 rounded-full font-black uppercase tracking-widest border border-red-600/20">
+                      👤 {receipt.created_by}
+                    </span>
+                  </div>
+                )}
               </div>
 
-              {/* Note Section */}
-              {receipt.note && (
-                <div className="mb-4 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                  <p className="text-xs text-blue-400 font-black uppercase tracking-widest mb-2">📝 Note</p>
-                  <p className="text-sm text-slate-700 line-clamp-2">{receipt.note}</p>
+              <div className="relative z-10 space-y-6 mb-10">
+                <div className="flex items-center gap-5">
+                  <div className="h-14 w-14 rounded-[1.2rem] bg-red-600/10 border border-red-600/20 flex items-center justify-center flex-shrink-0 text-2xl group-hover:scale-110 transition-transform shadow-inner">📅</div>
+                  <div>
+                    <p className="text-[10px] font-black text-red-500/50 uppercase tracking-widest">Date d'émission</p>
+                    <p className="text-lg font-black text-red-200">{new Date(receipt.receipt_date).toLocaleDateString('fr-FR')}</p>
+                  </div>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="mt-auto pt-4 border-t border-slate-100 flex gap-2">
-                <button
-                  onClick={() => handleEdit(receipt)}
-                  className="flex-1 px-4 py-3 bg-blue-500 text-white font-black text-xs rounded-2xl hover:bg-blue-600 transition-all uppercase tracking-widest"
+                {receipt.note && (
+                  <div className="flex items-start gap-5">
+                    <div className="h-14 w-14 rounded-[1.2rem] bg-amber-600/10 border border-amber-600/20 flex items-center justify-center flex-shrink-0 text-2xl group-hover:scale-110 transition-transform shadow-inner mt-1">📝</div>
+                    <div className="flex-1">
+                      <p className="text-[10px] font-black text-amber-500/50 uppercase tracking-widest">Observations</p>
+                      <p className="text-sm font-bold text-red-300/60 line-clamp-2 leading-relaxed italic">"{receipt.note}"</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="relative z-10 flex gap-3 mt-auto pt-6 border-t border-red-600/10 flex-wrap">
+                <button 
+                  onClick={() => {
+                    setEditingRecord(receipt);
+                    setShowForm(true);
+                  }}
+                  className="flex-1 min-w-[100px] relative group/btn overflow-hidden py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg active:scale-95"
                 >
-                  ✏️ Éditer
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover/btn:from-red-700 group-hover/btn:via-red-500 group-hover/btn:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 flex items-center justify-center gap-2 text-white">
+                    <span className="transition-all duration-300 group-hover/btn:scale-125">✏️</span>
+                    <span>Modifier</span>
+                  </div>
                 </button>
-                <button
+                
+                <button 
                   onClick={() => handlePrint(receipt)}
-                  className="flex-1 px-4 py-3 bg-green-500 text-white font-black text-xs rounded-2xl hover:bg-green-600 transition-all uppercase tracking-widest"
+                  className="flex-1 min-w-[100px] relative group/btn overflow-hidden py-3.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-lg active:scale-95"
                 >
-                  🖨️ Imprimer
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover/btn:from-red-700 group-hover/btn:via-red-500 group-hover/btn:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 flex items-center justify-center gap-2 text-white">
+                    <span className="transition-all duration-300 group-hover/btn:scale-125">🖨️</span>
+                    <span>Imprimer</span>
+                  </div>
                 </button>
-                <button
+
+                <button 
                   onClick={() => handleDelete(receipt.id)}
-                  className="flex-1 px-4 py-3 bg-red-500 text-white font-black text-xs rounded-2xl hover:bg-red-600 transition-all uppercase tracking-widest"
+                  className="h-12 w-12 relative group/btn overflow-hidden rounded-xl font-black flex items-center justify-center transition-all duration-300 shadow-lg active:scale-95"
                 >
-                  🗑️ Supprimer
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover/btn:from-red-700 group-hover/btn:via-red-500 group-hover/btn:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 text-lg transition-all duration-300 group-hover/btn:scale-125 text-white">🗑️</div>
                 </button>
               </div>
             </div>
           ))}
         </div>
       )}
+
+      {showForm && (
+        <ReceiptForm 
+          lang={lang}
+          onClose={() => {
+            setShowForm(false);
+            setEditingRecord(null);
+          }}
+          onSubmit={handleSave}
+          initialData={editingRecord}
+        />
+      )}
     </div>
   );
 };
+
+// --- RECEIPT FORM MODAL COMPONENT ---
+
+const ReceiptForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (data: any) => void; initialData: Receipt | null }> = ({ lang, onClose, onSubmit, initialData }) => {
+  const [formData, setFormData] = useState({
+    name: initialData?.name || '',
+    receipt_date: initialData?.receipt_date || new Date().toISOString().split('T')[0],
+    note: initialData?.note || ''
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative glass-card w-full max-w-2xl h-full max-h-[85vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
+        
+        {/* Modal Header */}
+        <div className="px-6 md:px-10 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
+          <div className="flex items-center gap-6">
+            <div className="h-16 w-16 rounded-[1.5rem] bg-red-600/30 text-red-300 flex items-center justify-center text-3xl border border-red-600/40 shadow-lg">📄</div>
+            <div>
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">{initialData ? "Modifier le Reçu" : "Nouveau Document"}</h2>
+              <p className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.2em] mt-1 italic">Émission de Document Officiel</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="relative z-10 text-white">✕</div>
+          </button>
+        </div>
+
+        {/* Form Content */}
+        <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-10 py-10 space-y-10">
+          <Section title="Informations Principales" icon="✍️">
+             <div className="space-y-8 pt-4">
+                <Field 
+                  label="Désignation du Reçu" 
+                  name="name" 
+                  value={formData.name} 
+                  onChange={handleChange} 
+                  placeholder="ex: Versement initial commande #44" 
+                  emoji="🏷️" 
+                />
+                <Field 
+                  label="Date de l'opération" 
+                  name="receipt_date" 
+                  type="date"
+                  value={formData.receipt_date} 
+                  onChange={handleChange} 
+                  emoji="📅" 
+                />
+             </div>
+          </Section>
+
+          <Section title="Notes Additionnelles" icon="📝">
+             <div className="pt-4">
+                <TextAreaField 
+                  label="Observations particulières" 
+                  name="note" 
+                  value={formData.note} 
+                  onChange={handleChange} 
+                  placeholder="Saisissez ici toute note ou détail important relatif à ce document..." 
+                  emoji="ℹ️"
+                  minHeight="140px"
+                />
+             </div>
+          </Section>
+        </div>
+
+        {/* Modal Footer */}
+        <div className="px-6 md:px-10 py-8 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex items-center justify-center gap-6 shrink-0 flex-wrap">
+          <button 
+            onClick={onClose} 
+            className="px-10 py-4 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-2xl hover:bg-slate-900/70 transition-all uppercase tracking-widest text-xs"
+          >
+            Annuler
+          </button>
+          
+          <button 
+            onClick={() => {
+              if (!formData.name || !formData.receipt_date) {
+                alert('Veuillez remplir les champs obligatoires');
+                return;
+              }
+              onSubmit(formData);
+            }} 
+            className="relative group overflow-hidden px-16 py-4 font-black rounded-2xl transition-all duration-300 uppercase tracking-widest text-xs shadow-xl active:scale-95"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            <div className="relative z-10 flex items-center justify-center gap-3 text-white">
+              <span className="transition-all duration-300 group-hover:scale-125">✅</span>
+              <span className="transition-all duration-300 group-hover:tracking-[0.2em]">{initialData ? "Mettre à jour" : "Confirmer la création"}</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- HELPER COMPONENTS ---
+
+const Section: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
+  <div className="bg-red-600/5 rounded-[2.5rem] p-8 space-y-6 border border-red-600/20 shadow-inner group">
+     <div className="flex items-center gap-5">
+        <div className="h-12 w-12 rounded-xl bg-red-600/20 text-red-300 flex items-center justify-center text-xl border border-red-600/30 group-hover:scale-110 transition-transform">{icon}</div>
+        <h4 className="text-xl font-black text-red-100 tracking-tight">{title}</h4>
+     </div>
+     <div className="relative">{children}</div>
+  </div>
+);
+
+const Field: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; placeholder?: string; emoji?: string }> = ({ label, name, value, onChange, type = 'text', placeholder, emoji }) => (
+  <div className="space-y-3">
+     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.2em] ml-4 flex items-center gap-2">
+       {emoji && <span>{emoji}</span>} {label}
+     </label>
+     <input 
+       type={type} 
+       name={name} 
+       value={value ?? ''} 
+       onChange={onChange} 
+       placeholder={placeholder}
+       className="w-full bg-slate-950/50 border-2 border-red-600/20 px-8 py-5 rounded-2xl outline-none focus:border-red-600/60 focus:ring-2 focus:ring-red-600/10 font-bold text-red-100 shadow-sm transition-all text-lg placeholder-red-400/20" 
+     />
+  </div>
+);
+
+const TextAreaField: React.FC<{ label: string; name: string; value: any; onChange: any; placeholder?: string; emoji?: string; minHeight?: string }> = ({ label, name, value, onChange, placeholder, emoji, minHeight = '100px' }) => (
+  <div className="space-y-3">
+     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.2em] ml-4 flex items-center gap-2">
+       {emoji && <span>{emoji}</span>} {label}
+     </label>
+     <textarea 
+       name={name} 
+       value={value ?? ''} 
+       onChange={onChange} 
+       placeholder={placeholder}
+       style={{ minHeight }}
+       className="w-full bg-slate-950/50 border-2 border-red-600/20 px-8 py-5 rounded-2xl outline-none focus:border-red-600/60 focus:ring-2 focus:ring-red-600/10 font-bold text-red-100 shadow-sm transition-all text-lg resize-none placeholder-red-400/20" 
+     />
+  </div>
+);
+
+

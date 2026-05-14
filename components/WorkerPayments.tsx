@@ -79,7 +79,7 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-4xl mb-4">💳</div>
-          <p className="text-slate-400 font-bold">Chargement...</p>
+          <p className="text-red-400/70 font-bold">Chargement...</p>
         </div>
       </div>
     );
@@ -90,7 +90,7 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
           <div className="text-4xl mb-4">⚠️</div>
-          <p className="text-slate-400 font-bold">Erreur: Travailleur non trouvé</p>
+          <p className="text-red-400/70 font-bold">Erreur: Travailleur non trouvé</p>
         </div>
       </div>
     );
@@ -105,33 +105,33 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
             💳
           </div>
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Historique des Paiements</h1>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Vos Transactions Financières</p>
+            <h1 className="text-4xl font-black text-red-100 tracking-tight">Historique des Paiements</h1>
+            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">Vos Transactions Financières</p>
           </div>
         </div>
         <button 
           onClick={() => setShowCreatedDate(!showCreatedDate)}
-          className="px-6 py-3 bg-slate-50 rounded-2xl text-slate-500 font-bold text-sm hover:bg-slate-100 transition-all"
+          className="px-6 py-3 bg-slate-50 rounded-2xl text-red-400/70 font-bold text-sm hover:bg-red-950/30 transition-all"
         >
           {showCreatedDate ? '📅 Masquer' : '📅 Afficher'} Dates
         </button>
       </div>
 
       {/* Worker Info Card */}
-      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] p-8 border border-slate-200">
+      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] p-8 border border-red-600/30">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Nom Complet</p>
-            <p className="text-2xl font-black text-slate-900">{currentWorker.fullname}</p>
+            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Nom Complet</p>
+            <p className="text-2xl font-black text-red-100">{currentWorker.fullname}</p>
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Type de Paiement</p>
-            <p className="text-lg font-black text-blue-600">
+            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Type de Paiement</p>
+            <p className="text-lg font-black text-red-400">
               {currentWorker.payment_type === 'month' ? '📅 Mensuel' : '📆 Quotidien'}
             </p>
           </div>
           <div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Montant de Base</p>
+            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Montant de Base</p>
             <p className="text-2xl font-black text-green-600">{currentWorker.amount?.toLocaleString()} DA</p>
           </div>
         </div>
@@ -144,27 +144,27 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
           <p className="text-4xl font-black text-green-600">{totalEarned.toLocaleString()}</p>
           <p className="text-sm font-bold text-green-500 mt-2">DA</p>
         </div>
-        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] p-8 border border-slate-200 shadow-sm">
-          <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-3">Nombre de Paiements</p>
-          <p className="text-4xl font-black text-slate-700">{payments.length}</p>
-          <p className="text-sm font-bold text-slate-500 mt-2">Transactions</p>
+        <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-[2.5rem] p-8 border border-red-600/30 shadow-sm">
+          <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-3">Nombre de Paiements</p>
+          <p className="text-4xl font-black text-red-100">{payments.length}</p>
+          <p className="text-sm font-bold text-red-400/70 mt-2">Transactions</p>
         </div>
       </div>
 
       {/* Payments History */}
       <div>
-        <h2 className="text-2xl font-black text-slate-900 mb-6">📜 Historique Détaillé</h2>
+        <h2 className="text-2xl font-black text-red-100 mb-6">📜 Historique Détaillé</h2>
         {payments.length === 0 ? (
-          <div className="bg-slate-50 rounded-[2rem] p-12 text-center border border-slate-200">
+          <div className="bg-slate-50 rounded-[2rem] p-12 text-center border border-red-600/30">
             <div className="text-5xl mb-4">📋</div>
-            <p className="text-slate-400 font-bold">Aucun paiement enregistré</p>
+            <p className="text-red-400/70 font-bold">Aucun paiement enregistré</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {payments.map((payment) => (
               <div
                 key={payment.id}
-                className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-lg transition-all duration-300 p-6 group"
+                className="glass-card rounded-[2.5rem] border border-red-600/20 shadow-sm hover:shadow-lg transition-all duration-300 p-6 group"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div>
@@ -172,20 +172,20 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
                       <span className="text-2xl">
                         {payment.payment_type === 'advance' ? '💰' : payment.payment_type === 'monthly' ? '📅' : '📆'}
                       </span>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">
                         {payment.payment_type === 'advance' ? 'Avance' : payment.payment_type === 'monthly' ? 'Mensuel' : 'Quotidien'}
                       </p>
                     </div>
-                    <p className="text-3xl font-black text-slate-900">
-                      {payment.amount?.toLocaleString()} <span className="text-lg text-slate-400">DA</span>
+                    <p className="text-3xl font-black text-red-100">
+                      {payment.amount?.toLocaleString()} <span className="text-lg text-red-400/70">DA</span>
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-slate-500 mb-1">
+                    <p className="text-sm font-bold text-red-400/70 mb-1">
                       📅 {new Date(payment.payment_date).toLocaleDateString('fr-FR')}
                     </p>
                     {showCreatedDate && payment.created_at && (
-                      <p className="text-xs font-bold text-slate-400">
+                      <p className="text-xs font-bold text-red-400/70">
                         Créé: {new Date(payment.created_at).toLocaleDateString('fr-FR')}
                       </p>
                     )}
@@ -193,14 +193,14 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
                 </div>
 
                 {payment.description && (
-                  <div className="bg-slate-50 rounded-xl p-3 mb-3 border border-slate-100">
-                    <p className="text-xs font-bold text-slate-600">📝 Note</p>
-                    <p className="text-sm text-slate-700 font-semibold">{payment.description}</p>
+                  <div className="bg-slate-50 rounded-xl p-3 mb-3 border border-red-600/20">
+                    <p className="text-xs font-bold text-red-400/70">📝 Note</p>
+                    <p className="text-sm text-red-100 font-semibold">{payment.description}</p>
                   </div>
                 )}
 
                 {payment.created_by && (
-                  <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+                  <div className="flex items-center gap-2 text-xs font-bold text-red-400/70">
                     <span>👤</span>
                     <span>Créé par: {payment.created_by}</span>
                   </div>
@@ -213,3 +213,5 @@ export const WorkerPayments: React.FC<WorkerPaymentsProps> = ({ lang }) => {
     </div>
   );
 };
+
+

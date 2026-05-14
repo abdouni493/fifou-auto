@@ -15,6 +15,7 @@ export const translations = {
       suppliers: "Fournisseurs",
       purchase: "Achats Véhicules",
       pos: "Point de vente",
+      clients: "Clients",
       checkin: "Inspection Flotte",
       team: "Équipe",
       billing: "Facturation",
@@ -174,7 +175,7 @@ export const translations = {
       }
     },
     expenses: {
-      title: "Dépenses Magasin",
+      title: "Dépenses Véhicules et Magasin",
       name: "Libellé de la dépense",
       cost: "Montant",
       date: "Date",
@@ -254,6 +255,7 @@ export const translations = {
       suppliers: "الموردين",
       purchase: "مشتريات السيارات",
       pos: "نقطة البيع",
+      clients: "العملاء",
       checkin: "فحص الأسطول",
       team: "الفريق",
       billing: "الفواتير",
@@ -413,7 +415,7 @@ export const translations = {
       }
     },
     expenses: {
-      title: "مصاريف المحل",
+      title: "مصاريف السيارات والمحل",
       name: "اسم المصروف",
       cost: "التكلفة",
       date: "التاريخ",

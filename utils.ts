@@ -5,9 +5,76 @@ export const getLoggedInUserName = (): string | null => {
   return localStorage.getItem('autolux_user_name');
 };
 
-// Utility function to get the created_by value for database records
+// Utility function to get the currently logged-in user's ID
+export const getLoggedInUserId = (): string | null => {
+  return localStorage.getItem('autolux_user_id');
+};
+
+// Utility function to get the created_by value for database records (returns UUID if possible)
 export const getCreatedByValue = (): string => {
-  return getLoggedInUserName() || 'Unknown';
+  const userId = getLoggedInUserId();
+  const userName = getLoggedInUserName();
+  // Return UUID if available, else username/email, else 'System'
+  return userId || userName || 'System';
+};
+
+/**
+ * Compress an image file to reduce its size before uploading.
+ */
+export const compressImage = (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 1280;
+        const MAX_HEIGHT = 1280;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const newFile = new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(newFile);
+              } else {
+                resolve(file); // fallback
+              }
+            },
+            'image/jpeg',
+            0.8
+          );
+        } else {
+          resolve(file); // fallback
+        }
+      };
+      img.onerror = (error) => reject(error);
+    };
+    reader.onerror = (error) => reject(error);
+  });
 };
 
 /**
@@ -23,11 +90,21 @@ export async function uploadImageToBucket(
   file: File,
   folder?: string
 ): Promise<string> {
-  const ext = file.name.split('.').pop() ?? 'jpg';
+  // Compress image if it's an image file
+  let fileToUpload = file;
+  if (file.type.startsWith('image/')) {
+    try {
+      fileToUpload = await compressImage(file);
+    } catch (e) {
+      console.warn("Image compression failed, using original file", e);
+    }
+  }
+
+  const ext = fileToUpload.name.split('.').pop() ?? 'jpg';
   const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const path = folder ? `${folder}/${filename}` : filename;
 
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error } = await supabase.storage.from(bucket).upload(path, fileToUpload, {
     cacheControl: '3600',
     upsert: false,
   });

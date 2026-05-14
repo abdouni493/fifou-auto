@@ -32,7 +32,7 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
   const [isVehicleFormOpen, setIsVehicleFormOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [editingVehicleExpense, setEditingVehicleExpense] = useState<VehicleExpense | null>(null);
-  const [activeTab, setActiveTab] = useState<'general' | 'vehicles'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'vehicles'>('vehicles');
   const [vehicles, setVehicles] = useState<PurchaseRecord[]>([]);
   const [vehicleSearch, setVehicleSearch] = useState('');
   const [expandedVehicles, setExpandedVehicles] = useState<string[]>([]);
@@ -47,20 +47,20 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
     }
   }, [activeTab]);
 
-  const fetchExpenses = async () => {
-    setLoading(true);
+  const fetchExpenses = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const { data, error } = await supabase.from('expenses').select('*').order('date', { ascending: false });
     if (error) console.error(error);
     else setExpenses(data || []);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
-  const fetchVehicleExpenses = async () => {
-    setLoading(true);
+  const fetchVehicleExpenses = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const { data, error } = await supabase.from('vehicle_expenses').select('*').order('date', { ascending: false });
     if (error) console.error(error);
     else setVehicleExpenses(data || []);
-    setLoading(false);
+    if (showLoading) setLoading(false);
   };
 
   const fetchVehicles = async () => {
@@ -77,47 +77,87 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
   const handleDelete = async (id: string) => {
     if (window.confirm(t.suppliers.confirmDelete)) {
       await supabase.from('expenses').delete().eq('id', id);
-      fetchExpenses();
+      fetchExpenses(false);
     }
   };
 
   const handleDeleteVehicleExpense = async (id: string) => {
     if (window.confirm(t.suppliers.confirmDelete)) {
       await supabase.from('vehicle_expenses').delete().eq('id', id);
-      fetchVehicleExpenses();
+      fetchVehicleExpenses(false);
     }
   };
 
   const handleSubmit = async (data: any) => {
-    // Auto-populate created_by if not already set
-    const dataWithCreatedBy = {
-      ...data,
-      created_by: data.created_by || getCreatedByValue()
-    };
-    if (editingExpense) {
-      await supabase.from('expenses').update(dataWithCreatedBy).eq('id', editingExpense.id);
-    } else {
-      await supabase.from('expenses').insert([dataWithCreatedBy]);
+    try {
+      const dataWithCreatedBy = {
+        ...data,
+        created_by: data.created_by || getCreatedByValue()
+      };
+      
+      // Delete empty note to avoid schema errors if the column hasn't been created yet
+      if (!dataWithCreatedBy.note) {
+        delete dataWithCreatedBy.note;
+      }
+
+      let resError = null;
+      if (editingExpense) {
+        const { error } = await supabase.from('expenses').update(dataWithCreatedBy).eq('id', editingExpense.id);
+        resError = error;
+      } else {
+        const { error } = await supabase.from('expenses').insert([dataWithCreatedBy]);
+        resError = error;
+      }
+
+      if (resError) throw resError;
+
+      fetchExpenses(false);
+      setIsFormOpen(false);
+      setEditingExpense(null);
+    } catch (err: any) {
+      console.error("Submission Error:", err);
+      if (err.code === '42703' && err.message?.includes('note')) {
+         alert("Erreur: La colonne 'note' n'existe pas encore. Veuillez exécuter le code SQL fourni.");
+      } else {
+         alert(`Erreur de connexion ou de base de données : ${err.message || 'Vérifiez votre connexion internet.'}`);
+      }
     }
-    fetchExpenses();
-    setIsFormOpen(false);
-    setEditingExpense(null);
   };
 
   const handleVehicleExpenseSubmit = async (data: any) => {
-    // Auto-populate created_by if not already set
-    const dataWithCreatedBy = {
-      ...data,
-      created_by: data.created_by || getCreatedByValue()
-    };
-    if (editingVehicleExpense) {
-      await supabase.from('vehicle_expenses').update(dataWithCreatedBy).eq('id', editingVehicleExpense.id);
-    } else {
-      await supabase.from('vehicle_expenses').insert([dataWithCreatedBy]);
+    try {
+      const { newMileage, ...expenseData } = data;
+      const dataWithCreatedBy = {
+        ...expenseData,
+        created_by: expenseData.created_by || getCreatedByValue()
+      };
+
+      if (!dataWithCreatedBy.note) {
+        delete dataWithCreatedBy.note;
+      }
+
+      let resError = null;
+      if (editingVehicleExpense) {
+        const { error } = await supabase.from('vehicle_expenses').update(dataWithCreatedBy).eq('id', editingVehicleExpense.id);
+        resError = error;
+      } else {
+        const { error } = await supabase.from('vehicle_expenses').insert([dataWithCreatedBy]);
+        resError = error;
+        if (!error && newMileage !== undefined && expenseData.vehicle_id) {
+          await supabase.from('purchases').update({ mileage: newMileage }).eq('id', expenseData.vehicle_id);
+        }
+      }
+
+      if (resError) throw resError;
+
+      fetchVehicleExpenses(false);
+      fetchVehicles();
+      setIsVehicleFormOpen(false);
+      setEditingVehicleExpense(null);
+    } catch (err: any) {
+      console.error("Vehicle Submission Error:", err);
+      alert(`Erreur d'enregistrement : ${err.message || 'Vérifiez votre connexion internet.'}`);
     }
-    fetchVehicleExpenses();
-    setIsVehicleFormOpen(false);
-    setEditingVehicleExpense(null);
   };
 
   const printVehicleExpenseInvoice = (expense: VehicleExpense) => {
@@ -190,263 +230,553 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
     }
   };
 
-  if (loading) return <div className="text-center py-20 text-red-500 animate-pulse font-black">CHARGEMENT DES FINANCES...</div>;
+  if (loading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+       <div className="text-center animate-pulse">
+          <div className="h-24 w-24 border-t-4 border-red-600 rounded-full animate-spin mx-auto mb-8"></div>
+          <p className="text-red-400 font-black uppercase text-xl tracking-[0.5em] italic">Analyse des flux financiers...</p>
+       </div>
+    </div>
+  );
 
   return (
-    <div className="space-y-10">
-      <div className="flex justify-between items-end border-b border-slate-100 pb-8">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900">{t.expenses.title}</h2>
-          <p className="text-slate-400 font-bold text-xs uppercase mt-3">Gestion des Charges</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => setShowCreatedDate(!showCreatedDate)}
-            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${showCreatedDate ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-          >
-            📅 {showCreatedDate ? 'Masquer' : 'Afficher'} Date Création
-          </button>
-          <button 
-            onClick={() => { 
-              if (activeTab === 'general') {
-                setEditingExpense(null);
-                setIsFormOpen(true);
-              } else {
-                setEditingVehicleExpense(null);
-                setIsVehicleFormOpen(true);
-              }
-            }}
-            className="custom-gradient-btn px-10 py-5 rounded-[2.5rem] text-white font-black text-sm shadow-2xl transition-all"
-          >
-            💰 {activeTab === 'general' ? t.expenses.add : '+ Nouvelle Charge Véhicule'}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative min-h-screen">
+      {/* Premium background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-black via-slate-950 to-black pointer-events-none -z-20"></div>
+      
+      {/* Ambient background blobs with enhanced opacity */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-red-800 rounded-full blur-[150px] opacity-[0.08] animate-blob pointer-events-none -z-10"></div>
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-red-700 rounded-full blur-[140px] opacity-[0.07] animate-blob pointer-events-none -z-10" style={{animationDelay:'2s'}}></div>
+      <div className="fixed top-1/2 left-1/3 w-[400px] h-[400px] bg-red-900 rounded-full blur-[130px] opacity-[0.05] animate-blob pointer-events-none -z-10" style={{animationDelay:'4s'}}></div>
+      
+      {/* Subtle grid overlay */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(220,38,38,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none -z-10"></div>
+      
+      {/* Radial gradient accent */}
+      <div className="fixed inset-0 bg-gradient-radial from-red-600/5 via-transparent to-transparent pointer-events-none -z-10"></div>
 
-      {/* Tab Navigation */}
-      <div className="flex gap-6 border-b-2 border-slate-200">
-        <button
-          onClick={() => setActiveTab('general')}
-          className={`pb-4 px-6 font-black uppercase text-sm transition-all ${
-            activeTab === 'general'
-              ? 'text-slate-900 border-b-4 border-cyan-500'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          💰 Charges Générales
-        </button>
-        <button
-          onClick={() => setActiveTab('vehicles')}
-          className={`pb-4 px-6 font-black uppercase text-sm transition-all ${
-            activeTab === 'vehicles'
-              ? 'text-slate-900 border-b-4 border-cyan-500'
-              : 'text-slate-400 hover:text-slate-600'
-          }`}
-        >
-          🚗 Dépenses Véhicules
-        </button>
-      </div>
+      <div className="relative z-10 space-y-12">
 
-      {/* General Expenses Tab */}
-      {activeTab === 'general' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-          {expenses.map(ex => (
-            <div key={ex.id} className="bg-white rounded-[4rem] border border-slate-100 p-10 shadow-sm hover:shadow-xl transition-all duration-700 flex flex-col relative overflow-hidden h-full">
-              <div className="flex-grow mb-10">
-                <p className="text-[10px] font-black text-slate-300 uppercase mb-2">{ex.date}</p>
-                {showCreatedDate && ex.created_at && (
-                  <p className="text-[9px] font-black text-blue-600 uppercase mb-2">📅 Créé: {new Date(ex.created_at).toLocaleDateString('fr-FR')}</p>
-                )}
-                {ex.created_by && (
-                  <p className="text-[9px] font-black text-slate-600 uppercase mb-3">👤 Par: {ex.created_by}</p>
-                )}
-                <h3 className="text-2xl font-black text-slate-900 mb-3">{ex.name}</h3>
-                <p className="text-5xl font-black text-red-600 tracking-tighter">
-                  {ex.cost.toLocaleString()} <span className="text-sm font-bold text-slate-400">{t.currency}</span>
+        
+        {/* Header Banner */}
+        <div className="bg-gradient-to-br from-red-950 via-slate-900 to-black rounded-[3rem] p-10 md:p-16 text-white shadow-[0_0_80px_rgba(220,38,38,0.3)] overflow-hidden relative border border-red-600/40">
+          <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(220,38,38,0.1)_0%,transparent_50%)]"></div>
+          <div className="absolute top-0 right-0 w-96 h-96 bg-red-600 rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-1/3 w-80 h-80 bg-red-700 rounded-full blur-[120px] opacity-8 pointer-events-none"></div>
+
+          <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8">
+            <div className="flex items-center gap-6">
+              <div className="h-20 w-20 rounded-[2rem] bg-red-600 text-white flex items-center justify-center text-4xl shadow-xl border border-red-400/30 group-hover:scale-110 transition-transform duration-500">
+                💸
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-red-400 to-red-600 tracking-tight mb-2">
+                  {t.expenses.title}
+                </h1>
+                <p className="text-red-400/80 font-black text-sm uppercase tracking-[0.2em]">
+                  Architecture de Gestion des Charges
                 </p>
               </div>
-              <div className="flex gap-4 pt-8 border-t">
-                <button onClick={() => { setEditingExpense(ex); setIsFormOpen(true); }} className="flex-1 py-5 rounded-[1.8rem] bg-slate-900 text-white font-black text-[11px] uppercase transition-all">✏️ {t.actions.edit}</button>
-                <button onClick={() => handleDelete(ex.id)} className="px-8 py-5 rounded-[1.8rem] bg-red-50 text-red-500 border hover:bg-red-600 hover:text-white transition-all">🗑️</button>
-              </div>
             </div>
-          ))}
-          {expenses.length === 0 && <p className="col-span-full text-center py-20 text-slate-400 font-black uppercase italic">Aucune dépense enregistrée.</p>}
-        </div>
-      )}
 
-      {/* Vehicle Expenses Tab */}
-      {activeTab === 'vehicles' && (
-        <div>
-          <div className="flex items-center gap-4 mb-6">
-            <input
-              type="text"
-              placeholder="Rechercher par plaque, VIN ou nom du véhicule..."
-              value={vehicleSearch}
-              onChange={e => setVehicleSearch(e.target.value)}
-              className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-[2rem] outline-none font-bold"
-            />
-            <button onClick={() => { setVehicleSearch(''); }} className="px-6 py-3 bg-slate-100 rounded-2xl font-black text-xs">Effacer</button>
+            <div className="flex flex-wrap items-center gap-6 relative z-10">
+              <button 
+                onClick={() => setShowCreatedDate(!showCreatedDate)}
+                className={`px-6 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 border ${
+                  showCreatedDate 
+                    ? 'bg-red-600 border-red-600 text-white shadow-lg' 
+                    : 'bg-red-950/30 border-red-600/40 text-red-400/70 hover:bg-red-600/20'
+                }`}
+              >
+                📅 {showCreatedDate ? 'Masquer' : 'Afficher'} Dates
+              </button>
+              
+              <button 
+                onClick={() => { 
+                  if (activeTab === 'general') {
+                    setEditingExpense(null);
+                    setIsFormOpen(true);
+                  } else {
+                    setEditingVehicleExpense(null);
+                    setIsVehicleFormOpen(true);
+                  }
+                }}
+                className="group relative px-8 py-4 rounded-xl overflow-hidden font-black uppercase tracking-wider text-sm transition-all duration-300"
+              >
+                {/* Animated gradient background */}
+                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                
+                {/* Dynamic shine effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                
+                {/* Enhanced glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-red-700 via-red-500 to-red-700 rounded-xl blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300 -z-10 group-hover:animate-pulse"></div>
+                
+                {/* Content */}
+                <div className="relative z-10 flex items-center justify-center gap-3 text-white">
+                  <span className="transition-all duration-300 group-hover:scale-125 group-hover:animate-bounce">💰</span>
+                  <span className="transition-all duration-300 group-hover:tracking-[0.2em]">
+                    {activeTab === 'general' ? t.expenses.add : '+ Nouvelle Charge'}
+                  </span>
+                </div>
+              </button>
+            </div>
           </div>
+        </div>
 
-          {/* Build filtered list */}
-          {(() => {
-            const q = vehicleSearch.trim().toLowerCase();
-            const filtered = q === '' ? vehicleExpenses : vehicleExpenses.filter(ex => {
-              const plate = (ex.vehicle_name || '').toLowerCase();
-              const v = vehiclesById[ex.vehicle_id];
-              const vin = (v?.vin || '').toLowerCase();
-              const makeModel = ((v?.make || '') + ' ' + (v?.model || '')).toLowerCase();
-              return plate.includes(q) || vin.includes(q) || makeModel.includes(q) || (ex.vehicle_make + ' ' + ex.vehicle_model).toLowerCase().includes(q);
-            });
 
-            if (filtered.length === 0) return <p className="col-span-full text-center py-20 text-slate-400 font-black uppercase italic">Aucune dépense véhicule trouvée.</p>;
+        {/* Tab Navigation */}
+        <div className="flex gap-4 p-2 bg-red-950/20 border border-red-600/20 rounded-[2rem] w-fit">
+          <button
+            onClick={() => setActiveTab('general')}
+            className={`px-10 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all duration-300 flex items-center gap-3 ${
+              activeTab === 'general'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                : 'text-red-400/50 hover:text-red-400 hover:bg-red-600/10'
+            }`}
+          >
+            <span>💰</span> Magasin / Général
+          </button>
+          <button
+            onClick={() => setActiveTab('vehicles')}
+            className={`px-10 py-4 rounded-xl font-black uppercase text-[10px] tracking-widest transition-all duration-300 flex items-center gap-3 ${
+              activeTab === 'vehicles'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-600/20'
+                : 'text-red-400/50 hover:text-red-400 hover:bg-red-600/10'
+            }`}
+          >
+            <span>🚗</span> Dépenses Véhicules
+          </button>
+        </div>
 
-            // If no search, show per-expense cards (existing behaviour)
-            if (q === '') {
-              return (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-10">
-                  {vehicleExpenses.map(ex => (
-                    <div key={ex.id} className="bg-white rounded-[4rem] border border-slate-100 p-10 shadow-sm hover:shadow-xl transition-all duration-700 flex flex-col relative overflow-hidden h-full">
-                      <div className="flex-grow mb-10">
-                        <p className="text-[10px] font-black text-slate-300 uppercase mb-2">🚗 {ex.vehicle_make} {ex.vehicle_model}</p>
-                        <p className="text-[10px] font-black text-slate-400 mb-4">Plaque: {ex.vehicle_name}</p>
-                        <p className="text-[10px] font-black text-slate-300 uppercase mb-2">{ex.date}</p>
-                        {showCreatedDate && ex.created_at && (
-                          <p className="text-[9px] font-black text-blue-600 uppercase mb-2">📅 Créé: {new Date(ex.created_at).toLocaleDateString('fr-FR')}</p>
-                        )}
-                        {ex.created_by && (
-                          <p className="text-[9px] font-black text-slate-600 uppercase mb-3">👤 Par: {ex.created_by}</p>
-                        )}
-                        <h3 className="text-2xl font-black text-slate-900 mb-3">{ex.name}</h3>
-                        <p className="text-5xl font-black text-red-600 tracking-tighter">
-                          {ex.cost.toLocaleString()} <span className="text-sm font-bold text-slate-400">{t.currency}</span>
+
+        {/* General Expenses Tab */}
+        {activeTab === 'general' && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            {expenses.map((ex, idx) => (
+              <div 
+                key={ex.id} 
+                className="glass-card rounded-[2.5rem] overflow-hidden border border-red-600/40 shadow-xl shadow-red-600/10 hover:shadow-2xl hover:shadow-red-600/20 hover:scale-105 hover:-translate-y-2 transition-all duration-300 flex flex-col group relative"
+                style={{ animationDelay: `${idx * 50}ms` }}
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-red-600/5 to-transparent pointer-events-none"></div>
+                
+                <div className="p-8 space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2">
+                      <span className="px-4 py-1.5 rounded-lg bg-red-600/20 border border-red-600/30 text-red-300 font-black text-[9px] uppercase tracking-widest inline-block">
+                        {ex.date}
+                      </span>
+                      {showCreatedDate && ex.created_at && (
+                        <p className="text-[8px] font-black text-red-500/40 uppercase tracking-widest">
+                          {new Date(ex.created_at).toLocaleDateString()}
                         </p>
-                        {ex.note && (
-                          <p className="text-sm text-slate-600 mt-4 italic">📝 {ex.note}</p>
-                        )}
-                      </div>
-                      <div className="flex gap-4 pt-8 border-t flex-col">
-                        <button onClick={() => printVehicleExpenseInvoice(ex)} className="w-full py-5 rounded-[1.8rem] bg-green-600 text-white font-black text-[11px] uppercase transition-all hover:bg-green-700">🖨️ Imprimer Facture</button>
-                        <div className="flex gap-4">
-                          <button onClick={() => { setEditingVehicleExpense(ex); setIsVehicleFormOpen(true); }} className="flex-1 py-5 rounded-[1.8rem] bg-slate-900 text-white font-black text-[11px] uppercase transition-all">✏️ {t.actions.edit}</button>
-                          <button onClick={() => handleDeleteVehicleExpense(ex.id)} className="px-8 py-5 rounded-[1.8rem] bg-red-50 text-red-500 border hover:bg-red-600 hover:text-white transition-all">🗑️</button>
+                      )}
+                    </div>
+                    <div className="h-12 w-12 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center text-2xl border border-red-600/30">
+                      💸
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-black text-red-100 mb-2 uppercase tracking-tight truncate">{ex.name}</h3>
+                    {ex.created_by && (
+                      <p className="text-[9px] font-black text-red-400/40 uppercase tracking-widest flex items-center gap-2">
+                        <span className="h-1.5 w-1.5 bg-red-600 rounded-full"></span>
+                        {ex.created_by}
+                      </p>
+                    )}
+                  </div>
+
+                  {ex.note && (
+                    <div className="bg-red-950/20 border border-red-600/20 p-4 rounded-xl relative overflow-hidden">
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600/40"></div>
+                      <p className="text-[10px] font-bold text-red-400/70 italic leading-relaxed line-clamp-2">
+                        {ex.note}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="pt-4 border-t border-red-600/20">
+                    <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 tracking-tighter">
+                      {ex.cost.toLocaleString()} <span className="text-[10px] text-red-400/40 uppercase tracking-normal font-black">DA</span>
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-4">
+                    <button 
+                      onClick={() => { setEditingExpense(ex); setIsFormOpen(true); }} 
+                      className="flex-1 relative group/btn overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase transition-all duration-300"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover/btn:from-red-700 group-hover/btn:via-red-500 group-hover/btn:to-red-700"></div>
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover/btn:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                      <span className="relative z-10 text-white flex items-center justify-center gap-2">
+                        <span>✏️</span> Modifier
+                      </span>
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(ex.id)} 
+                      className="h-10 w-10 relative group/btn overflow-hidden rounded-lg font-black flex items-center justify-center transition-all duration-300 border border-red-600/30"
+                    >
+                      <div className="absolute inset-0 bg-red-600/10 group-hover/btn:bg-red-600 transition-all duration-300"></div>
+                      <span className="relative z-10 text-red-400 group-hover/btn:text-white transition-all duration-300 group-hover/btn:scale-125">🗑️</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+
+            {expenses.length === 0 && (
+              <div className="col-span-full py-40 text-center glass-card rounded-[4rem] border border-red-600/10">
+                 <p className="text-7xl mb-10 grayscale opacity-20 animate-pulse">💰</p>
+                 <p className="text-red-400/40 font-black uppercase text-xs tracking-[0.5em] italic">Aucun flux financier détecté dans cette section.</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Vehicle Expenses Tab */}
+        {activeTab === 'vehicles' && (
+          <div className="space-y-12">
+            <div className="bg-red-950/20 p-6 rounded-2xl border border-red-600/20 flex flex-col lg:flex-row items-center gap-6 shadow-xl">
+              <div className="relative flex-grow w-full group">
+                <div className="absolute inset-y-0 left-6 flex items-center text-red-500/40 group-focus-within:text-red-500 transition-colors">🔍</div>
+                <input
+                  type="text"
+                  placeholder="Filtrer par plaque, VIN ou modèle..."
+                  value={vehicleSearch}
+                  onChange={e => setVehicleSearch(e.target.value)}
+                  className="w-full bg-red-600/5 border border-red-600/20 p-5 pl-14 rounded-xl outline-none font-black text-red-100 placeholder:text-red-900/40 focus:border-red-600/50 focus:bg-red-600/10 transition-all text-sm uppercase tracking-wider"
+                />
+              </div>
+              <button 
+                onClick={() => setVehicleSearch('')} 
+                className="px-8 py-5 bg-red-950/40 border border-red-600/30 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400/70 hover:bg-red-600/20 transition-all shrink-0"
+              >
+                Réinitialiser
+              </button>
+            </div>
+
+
+            {(() => {
+              const q = vehicleSearch.trim().toLowerCase();
+              const filtered = q === '' ? vehicleExpenses : vehicleExpenses.filter(ex => {
+                const plate = (ex.vehicle_name || '').toLowerCase();
+                const v = vehiclesById[ex.vehicle_id];
+                const vin = (v?.vin || '').toLowerCase();
+                const makeModel = ((v?.make || '') + ' ' + (v?.model || '')).toLowerCase();
+                return plate.includes(q) || vin.includes(q) || makeModel.includes(q) || (ex.vehicle_make + ' ' + ex.vehicle_model).toLowerCase().includes(q);
+              });
+
+              if (filtered.length === 0) return (
+                <div className="py-40 text-center glass-card rounded-[4rem] border border-red-600/10">
+                   <p className="text-7xl mb-10 grayscale opacity-20 animate-pulse">🚗</p>
+                   <p className="text-red-400/40 font-black uppercase text-xs tracking-[0.5em] italic">Aucune dépense véhicule ne correspond à votre recherche.</p>
+                </div>
+              );
+
+              if (q === '') {
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {vehicleExpenses.map((ex, idx) => (
+                      <div 
+                        key={ex.id} 
+                        className="glass-card rounded-[2.5rem] overflow-hidden border border-red-600/40 shadow-xl shadow-red-600/10 hover:shadow-2xl hover:shadow-red-600/20 hover:scale-105 hover:-translate-y-2 transition-all duration-300 flex flex-col group relative"
+                        style={{ animationDelay: `${idx * 50}ms` }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-br from-red-600/5 to-transparent pointer-events-none"></div>
+                        
+                        <div className="p-8 space-y-6">
+                          <div className="flex justify-between items-start">
+                            <div className="space-y-2">
+                              <span className="px-4 py-1.5 rounded-lg bg-red-600/20 border border-red-600/30 text-red-300 font-black text-[9px] uppercase tracking-widest inline-block">
+                                🚗 {ex.vehicle_make} {ex.vehicle_model}
+                              </span>
+                              <p className="text-[8px] font-black text-red-500/40 uppercase tracking-widest ml-1">{ex.vehicle_name}</p>
+                            </div>
+                            <div className="h-12 w-12 rounded-xl bg-red-600/20 text-red-400 flex items-center justify-center text-2xl border border-red-600/30">
+                              🔧
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <h3 className="text-xl font-black text-red-100 mb-4 tracking-tight uppercase truncate">{ex.name}</h3>
+                            <div className="space-y-2">
+                              <p className="text-[9px] font-black text-red-400/40 flex items-center gap-2 uppercase tracking-widest italic">📅 {ex.date}</p>
+                              {ex.created_by && <p className="text-[9px] font-black text-red-400/30 flex items-center gap-2 uppercase tracking-widest italic">👤 {ex.created_by}</p>}
+                            </div>
+                          </div>
+
+                          {ex.note && (
+                            <div className="bg-red-950/20 border border-red-600/20 p-4 rounded-xl relative overflow-hidden">
+                               <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600/40 transition-colors"></div>
+                               <p className="text-[10px] font-bold text-red-400/70 italic leading-relaxed line-clamp-2">{ex.note}</p>
+                            </div>
+                          )}
+                          
+                          <div className="pt-4 border-t border-red-600/20">
+                             <p className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 tracking-tighter">
+                               {ex.cost.toLocaleString()} <span className="text-[10px] text-red-400/40 uppercase tracking-normal font-black font-black">DA</span>
+                             </p>
+                          </div>
+                          
+                          <div className="flex flex-col gap-3 pt-4">
+                            <button 
+                              onClick={() => printVehicleExpenseInvoice(ex)} 
+                              className="group/print relative overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all duration-300"
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-r from-emerald-800 via-emerald-600 to-emerald-800 transition-all duration-300 group-hover/print:from-emerald-700 group-hover/print:via-emerald-500 group-hover/print:to-emerald-700"></div>
+                              <span className="relative z-10 text-white flex items-center justify-center gap-2">
+                                <span>🖨️</span> Imprimer Facture
+                              </span>
+                            </button>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => { setEditingVehicleExpense(ex); setIsVehicleFormOpen(true); }} 
+                                className="flex-grow relative group/btn overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase transition-all duration-300"
+                              >
+                                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover/btn:from-red-700 group-hover/btn:via-red-500 group-hover/btn:to-red-700"></div>
+                                <span className="relative z-10 text-white flex items-center justify-center gap-2">
+                                  <span>✏️</span> Modifier
+                                </span>
+                              </button>
+                              <button 
+                                onClick={() => handleDeleteVehicleExpense(ex.id)} 
+                                className="h-10 w-10 relative group/btn overflow-hidden rounded-lg font-black flex items-center justify-center transition-all duration-300 border border-red-600/30"
+                              >
+                                <div className="absolute inset-0 bg-red-600/10 group-hover/btn:bg-red-600 transition-all duration-300"></div>
+                                <span className="relative z-10 text-red-400 group-hover/btn:text-white transition-all duration-300 group-hover/btn:scale-125">🗑️</span>
+                              </button>
+                            </div>
+                          </div>
                         </div>
+                      </div>
+                    ))}
+
+                  </div>
+                );
+              }
+
+              // Grouped view
+              const groups: Record<string, { vehicle?: PurchaseRecord; expenses: VehicleExpense[]; total: number }> = {};
+              for (const ex of filtered) {
+                if (!groups[ex.vehicle_id]) groups[ex.vehicle_id] = { vehicle: vehiclesById[ex.vehicle_id], expenses: [], total: 0 };
+                groups[ex.vehicle_id].expenses.push(ex);
+                groups[ex.vehicle_id].total += Number(ex.cost || 0);
+              }
+
+              return (
+                <div className="space-y-8">
+                  {Object.entries(groups).map(([vid, grp], gIdx) => (
+                    <div 
+                      key={vid} 
+                      className="glass-card rounded-[2.5rem] border border-red-600/40 p-8 md:p-12 shadow-xl shadow-red-600/10 hover:shadow-2xl hover:shadow-red-600/20 transition-all duration-300 group animate-in fade-in slide-in-from-bottom-6"
+                      style={{ animationDelay: `${gIdx * 100}ms` }}
+                    >
+                      <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
+                        <div className="flex items-center gap-8">
+                          <div className="h-20 w-20 rounded-2xl bg-gradient-to-br from-red-600/20 to-red-950/40 text-red-400 flex items-center justify-center text-4xl shadow-xl border border-red-600/30 group-hover:scale-110 transition-transform duration-500">
+                            🚗
+                          </div>
+                          <div>
+                            <p className="text-3xl font-black text-red-100 tracking-tight uppercase mb-3 truncate max-w-[300px]">{grp.vehicle ? `${grp.vehicle.make} ${grp.vehicle.model}` : 'Véhicule Inconnu'}</p>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="px-3 py-1 bg-red-600/20 border border-red-600/30 rounded-lg text-[9px] font-black text-red-300 uppercase tracking-widest">Plaque: {grp.vehicle?.plate || grp.expenses[0]?.vehicle_name}</span>
+                              {grp.vehicle?.vin && <span className="px-3 py-1 bg-red-950/30 border border-red-600/20 rounded-lg text-[9px] font-black text-red-400/40 uppercase tracking-widest truncate max-w-[150px]">VIN: {grp.vehicle.vin}</span>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-center lg:text-right p-6 bg-red-950/20 border border-red-600/30 rounded-2xl min-w-[250px]">
+                          <p className="text-4xl font-black text-red-100 tracking-tighter mb-1">{grp.total.toLocaleString()} <span className="text-[10px] font-black text-red-400/40 tracking-normal ml-1 uppercase">DA</span></p>
+                          <p className="text-[8px] font-black text-red-500/50 uppercase tracking-[0.3em] italic">Investissement Entretien Total</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-10 border-t border-red-600/20 pt-8">
+                        <button 
+                          onClick={() => setExpandedVehicles(prev => prev.includes(vid) ? prev.filter(x=>x!==vid) : [...prev, vid])} 
+                          className={`w-full md:w-auto px-10 py-4 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-4 ${
+                            expandedVehicles.includes(vid) 
+                              ? 'bg-red-600 text-white shadow-lg shadow-red-600/30' 
+                              : 'bg-red-950/30 border border-red-600/40 text-red-400 hover:bg-red-600/20'
+                          }`}
+                        >
+                          {expandedVehicles.includes(vid) ? 'Masquer Détails ⬆️' : `Analyser ${grp.expenses.length} Opérations ⬇️`}
+                        </button>
+                        
+                        {expandedVehicles.includes(vid) && (
+                          <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                            {grp.expenses.map(ex => (
+                              <div key={ex.id} className="p-6 border border-red-600/20 rounded-2xl bg-red-950/10 hover:bg-red-950/20 hover:border-red-600/40 transition-all flex flex-col justify-between group/subitem">
+                                <div className="flex justify-between items-start mb-6">
+                                  <div className="space-y-2">
+                                    <p className="text-xl font-black text-red-100 tracking-tight uppercase group-hover/subitem:text-white transition-colors">{ex.name}</p>
+                                    <p className="text-[9px] font-black text-red-400/40 uppercase tracking-widest flex items-center gap-2 italic">
+                                      <span className="h-1 w-1 bg-red-600 rounded-full"></span>
+                                      📅 {ex.date}
+                                    </p>
+                                  </div>
+                                  <p className="font-black text-2xl text-red-200 tracking-tighter">{Number(ex.cost).toLocaleString()} <span className="text-[10px] text-red-400/40 uppercase">DA</span></p>
+                                </div>
+                                
+                                {ex.note && (
+                                  <div className="bg-red-950/20 border border-red-600/20 p-4 rounded-xl mb-6 relative overflow-hidden">
+                                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-600/40 transition-colors"></div>
+                                     <p className="text-[10px] font-bold text-red-400/70 italic leading-relaxed line-clamp-3">{ex.note}</p>
+                                  </div>
+                                )}
+                                
+                                <div className="flex items-center gap-2 mt-auto pt-6 border-t border-red-600/10">
+                                  <button onClick={() => printVehicleExpenseInvoice(ex)} className="flex-1 px-4 py-2 bg-emerald-800/40 border border-emerald-600/40 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg font-black text-[9px] uppercase tracking-widest transition-all">🖨️ Facture</button>
+                                  <button onClick={() => { setEditingVehicleExpense(ex); setIsVehicleFormOpen(true); }} className="flex-1 px-4 py-2 bg-red-800/40 border border-red-600/40 text-red-400 hover:bg-red-600 hover:text-white rounded-lg font-black text-[9px] uppercase tracking-widest transition-all">✏️ Modifier</button>
+                                  <button onClick={() => handleDeleteVehicleExpense(ex.id)} className="h-9 w-9 bg-red-950/40 border border-red-600/40 rounded-lg flex items-center justify-center text-red-400 hover:bg-red-600 hover:text-white transition-all ml-auto">🗑️</button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
+
                 </div>
               );
-            }
+            })()}
+          </div>
+        )}
 
-            // Group by vehicle_id and show one card per vehicle with totals + expandable expense list
-            const groups: Record<string, { vehicle?: PurchaseRecord; expenses: VehicleExpense[]; total: number }> = {};
-            for (const ex of filtered) {
-              if (!groups[ex.vehicle_id]) groups[ex.vehicle_id] = { vehicle: vehiclesById[ex.vehicle_id], expenses: [], total: 0 };
-              groups[ex.vehicle_id].expenses.push(ex);
-              groups[ex.vehicle_id].total += Number(ex.cost || 0);
-            }
+        {isFormOpen && (
+          <ExpenseForm 
+            lang={lang} 
+            onClose={() => setIsFormOpen(false)} 
+            onSubmit={handleSubmit}
+            initialData={editingExpense}
+          />
+        )}
 
-            return (
-              <div className="space-y-6">
-                {Object.entries(groups).map(([vid, grp]) => (
-                  <div key={vid} className="bg-white rounded-[2rem] border border-slate-100 p-6 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-black text-slate-700">{grp.vehicle ? `${grp.vehicle.make} ${grp.vehicle.model}` : 'Véhicule'}</p>
-                        <p className="text-xs text-slate-500">Plaque: {grp.vehicle?.plate || grp.expenses[0]?.vehicle_name} {grp.vehicle?.vin ? `• VIN: ${grp.vehicle.vin}` : ''}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-black text-red-600">{grp.total.toLocaleString()} <span className="text-sm font-bold text-slate-400">{t.currency}</span></p>
-                        <p className="text-xs text-slate-400">Total dépenses</p>
-                      </div>
-                    </div>
-
-                    <div className="mt-4">
-                      <button onClick={() => setExpandedVehicles(prev => prev.includes(vid) ? prev.filter(x=>x!==vid) : [...prev, vid])} className="text-sm text-blue-600 font-black">{expandedVehicles.includes(vid) ? 'Masquer les dépenses' : `Voir ${grp.expenses.length} dépenses`}</button>
-                      {expandedVehicles.includes(vid) && (
-                        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {grp.expenses.map(ex => (
-                            <div key={ex.id} className="p-4 border rounded-lg bg-slate-50">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="text-sm font-black">{ex.name}</p>
-                                  <p className="text-xs text-slate-500">{ex.date}</p>
-                                  {ex.note && <p className="text-xs italic text-slate-600">📝 {ex.note}</p>}
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-black text-red-600">{Number(ex.cost).toLocaleString()} {t.currency}</p>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 mt-3">
-                                <button onClick={() => printVehicleExpenseInvoice(ex)} className="px-3 py-2 bg-green-600 text-white rounded text-xs">🖨️</button>
-                                <button onClick={() => { setEditingVehicleExpense(ex); setIsVehicleFormOpen(true); }} className="px-3 py-2 bg-slate-900 text-white rounded text-xs">✏️</button>
-                                <button onClick={() => handleDeleteVehicleExpense(ex.id)} className="px-3 py-2 bg-red-50 text-red-500 rounded text-xs">🗑️</button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-      )}
-
-      {isFormOpen && (
-        <ExpenseForm 
-          lang={lang} 
-          onClose={() => setIsFormOpen(false)} 
-          onSubmit={handleSubmit}
-          initialData={editingExpense}
-        />
-      )}
-
-      {isVehicleFormOpen && (
-        <VehicleExpenseForm 
-          lang={lang} 
-          onClose={() => setIsVehicleFormOpen(false)} 
-          onSubmit={handleVehicleExpenseSubmit}
-          initialData={editingVehicleExpense}
-          vehicles={vehicles}
-        />
-      )}
+        {isVehicleFormOpen && (
+          <VehicleExpenseForm 
+            lang={lang} 
+            onClose={() => setIsVehicleFormOpen(false)} 
+            onSubmit={handleVehicleExpenseSubmit}
+            initialData={editingVehicleExpense}
+            vehicles={vehicles}
+          />
+        )}
+      </div>
     </div>
   );
 };
+
+const SectionBox = ({ title, icon, children }: any) => (
+  <div className="glass-card rounded-[3.5rem] p-10 space-y-10 shadow-2xl border border-red-600/10 hover:border-red-600/30 transition-all duration-500 relative overflow-hidden group/section">
+    <div className="absolute inset-0 bg-gradient-to-br from-red-600/[0.02] to-transparent opacity-0 group-hover/section:opacity-100 transition-opacity"></div>
+    <div className="flex items-center gap-6 relative z-10">
+       <div className="h-14 w-14 rounded-2xl bg-red-600/10 text-red-400 flex items-center justify-center text-3xl shadow-inner border border-red-600/20 group-hover/section:scale-110 transition-transform">{icon}</div>
+       <h4 className="text-base font-black text-red-100 uppercase tracking-[0.4em] italic">{title}</h4>
+    </div>
+    <div className="relative z-10">{children}</div>
+  </div>
+);
+
+const FieldBox = ({ label, name, value, onChange, type = 'text', placeholder = '' }: any) => (
+  <div className="space-y-4">
+    <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">{label}</label>
+    <div className="relative group/input">
+      <input 
+        type={type} 
+        name={name} 
+        value={value} 
+        onChange={onChange} 
+        placeholder={placeholder}
+        className="w-full bg-red-600/[0.03] border border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600/60 focus:bg-red-600/[0.06] font-black text-red-100 transition-all shadow-inner group-hover/input:border-red-600/40" 
+      />
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-red-600 transition-all duration-500 group-hover/input:w-1/2 opacity-50 blur-sm"></div>
+    </div>
+  </div>
+);
 
 const ExpenseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (data: any) => void; initialData: Expense | null }> = ({ lang, onClose, onSubmit, initialData }) => {
   const t = translations[lang];
   const [formData, setFormData] = useState<Partial<Expense>>(initialData || { name: '', cost: 0, date: new Date().toISOString().split('T')[0] });
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xl" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-lg rounded-[4.5rem] p-12 shadow-2xl flex flex-col">
-        <h3 className="text-4xl font-black text-slate-900 mb-12">{initialData ? t.actions.edit : "Nouvelle Charge"}</h3>
-        <div className="space-y-8">
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase">Désignation</label>
-            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" required />
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase">Montant</label>
-              <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: Number(e.target.value) })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" required />
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-in fade-in" onClick={onClose}></div>
+      <div className="relative bg-[#020617] w-full max-w-2xl rounded-[3rem] shadow-2xl animate-in zoom-in-95 overflow-hidden border border-red-600/30 flex flex-col">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-black p-10 border-b border-red-600/30 shrink-0">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center text-3xl shadow-lg border border-red-400/30">
+                📝
+              </div>
+              <div>
+                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 uppercase tracking-tight">
+                  {initialData ? 'Modifier Charge' : 'Nouvelle Charge'}
+                </h3>
+                <p className="text-[10px] font-black text-red-500/50 uppercase tracking-[0.3em] mt-1">Configuration Magasin</p>
+              </div>
             </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase">Date</label>
-              <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" required />
-            </div>
+            <button onClick={onClose} className="h-12 w-12 bg-red-950/50 border border-red-600/30 rounded-full flex items-center justify-center text-red-400/70 hover:bg-red-600/20 transition-all hover:scale-110 active:scale-90">✕</button>
           </div>
         </div>
-        <div className="flex justify-end gap-6 pt-12 mt-6">
-          <button onClick={onClose} className="px-10 py-5 rounded-[2rem] font-black uppercase text-xs">Annuler</button>
-          <button onClick={() => onSubmit(formData)} className="custom-gradient-btn px-20 py-6 rounded-[2rem] text-white font-black uppercase text-xs">Enregistrer</button>
+
+        <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
+
+          <div className="space-y-8">
+            <FieldBox 
+              label="Désignation de la Charge" 
+              value={formData.name} 
+              onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
+              placeholder="Ex: Loyer, Electricité, Papeterie..."
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               <FieldBox 
+                 label="Montant (DA)" 
+                 type="number" 
+                 value={formData.cost} 
+                 onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
+               />
+               <FieldBox 
+                 label="Date d'Exécution" 
+                 type="date" 
+                 value={formData.date} 
+                 onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
+               />
+            </div>
+
+            <div className="space-y-4">
+              <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Observations / Notes</label>
+              <textarea 
+                value={formData.note || ''} 
+                onChange={e => setFormData({ ...formData, note: e.target.value })} 
+                className="w-full bg-red-950/30 border-2 border-red-600/20 px-8 py-6 rounded-[1.5rem] outline-none focus:border-red-600/60 font-black text-red-100 transition-all min-h-[120px]" 
+                placeholder="Détails supplémentaires..."
+              />
+            </div>
+          </div>
+
         </div>
+
+        <div className="p-10 border-t border-red-600/20 bg-black/40 flex gap-6">
+          <button onClick={onClose} className="flex-1 py-4 bg-red-950/30 border border-red-600/30 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400/70 hover:bg-red-600/20 transition-all">
+            Annuler
+          </button>
+          <button 
+            onClick={() => onSubmit(formData)} 
+            className="flex-[2] relative group overflow-hidden py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            <span className="relative z-10 text-white flex items-center justify-center gap-3">
+              <span>💾</span> Enregistrer
+            </span>
+          </button>
+        </div>
+
       </div>
     </div>
   );
@@ -465,6 +795,19 @@ const VehicleExpenseForm: React.FC<{
   const [selectedVehicle, setSelectedVehicle] = useState<PurchaseRecord | null>(
     initialData ? vehicles.find(v => v.id === initialData.vehicle_id) || null : null
   );
+
+  let initCat: 'vidange' | 'assurance' | 'controle' | 'chaine' | 'autre' = 'autre';
+  if (initialData?.name) {
+    if (initialData.name.includes('Vidange')) initCat = 'vidange';
+    else if (initialData.name.includes('Assurance')) initCat = 'assurance';
+    else if (initialData.name.includes('Contrôle')) initCat = 'controle';
+    else if (initialData.name.includes('Chaîne')) initCat = 'chaine';
+  }
+
+  const [expenseCategory, setExpenseCategory] = useState<'vidange' | 'assurance' | 'controle' | 'chaine' | 'autre'>(initCat);
+  const [currentMileage, setCurrentMileage] = useState<number>(0);
+  const [expiryDate, setExpiryDate] = useState<string>('');
+
   const [formData, setFormData] = useState({
     name: initialData?.name || '',
     cost: initialData?.cost || 0,
@@ -483,6 +826,7 @@ const VehicleExpenseForm: React.FC<{
 
   const handleSelectVehicle = (vehicle: PurchaseRecord) => {
     setSelectedVehicle(vehicle);
+    setCurrentMileage(vehicle.mileage || 0);
     setShowVehicleSearch(false);
     setSearchQuery('');
   };
@@ -492,99 +836,219 @@ const VehicleExpenseForm: React.FC<{
       alert('Veuillez sélectionner un véhicule');
       return;
     }
+
+    let finalName = formData.name;
+    let finalNote = formData.note;
+
+    if (expenseCategory === 'vidange') {
+      finalName = '🛢️ Vidange';
+      finalNote = `Kilométrage: ${currentMileage} KM\n${finalNote}`;
+    } else if (expenseCategory === 'chaine') {
+      finalName = '⛓️ Chaîne de distribution';
+      finalNote = `Kilométrage: ${currentMileage} KM\n${finalNote}`;
+    } else if (expenseCategory === 'assurance') {
+      finalName = '🛡️ Assurance';
+      if (expiryDate) finalNote = `Expire le: ${expiryDate}\n${finalNote}`;
+    } else if (expenseCategory === 'controle') {
+      finalName = '🛠️ Contrôle Technique';
+      if (expiryDate) finalNote = `Expire le: ${expiryDate}\n${finalNote}`;
+    } else {
+      finalName = `❓ ${formData.name || 'Autre'}`;
+    }
+
     onSubmit({
       vehicle_id: selectedVehicle.id,
       vehicle_name: selectedVehicle.plate,
       vehicle_make: selectedVehicle.make,
       vehicle_model: selectedVehicle.model,
-      name: formData.name,
+      name: finalName,
       cost: formData.cost,
       date: formData.date,
-      note: formData.note,
+      note: finalNote.trim(),
+      newMileage: (expenseCategory === 'vidange' || expenseCategory === 'chaine') ? currentMileage : undefined
     });
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-xl" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-lg rounded-[4.5rem] p-12 shadow-2xl flex flex-col max-h-[90vh] overflow-y-auto">
-        <h3 className="text-4xl font-black text-slate-900 mb-12">{initialData ? t.actions.edit : "Nouvelle Charge Véhicule"}</h3>
-        <div className="space-y-8">
-          {/* Vehicle Selection */}
-          <div className="space-y-3 relative">
-            <label className="text-[10px] font-black text-slate-400 uppercase">🚗 Sélectionnez un Véhicule</label>
-            <button 
-              onClick={() => setShowVehicleSearch(!showVehicleSearch)}
-              className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold text-left text-slate-900 hover:border-slate-200 transition-all"
-            >
-              {selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plate})` : 'Cliquez pour rechercher...'}
-            </button>
-            
-            {showVehicleSearch && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-slate-100 rounded-[2rem] shadow-lg z-50">
-                <input
-                  type="text"
-                  placeholder="Rechercher par marque, modèle ou plaque..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-slate-50 border-b-2 border-slate-100 p-4 rounded-t-[2rem] outline-none font-bold"
-                  autoFocus
-                />
-                <div className="max-h-64 overflow-y-auto">
-                  {filteredVehicles.length > 0 ? (
-                    filteredVehicles.map(v => (
-                      <button
-                        key={v.id}
-                        onClick={() => handleSelectVehicle(v)}
-                        className="w-full text-left px-6 py-4 border-b border-slate-100 hover:bg-slate-50 font-bold"
-                      >
-                        <p className="text-slate-900">{v.make} {v.model}</p>
-                        <p className="text-xs text-slate-500">Plaque: {v.plate}</p>
-                      </button>
-                    ))
-                  ) : (
-                    <p className="p-4 text-slate-400 text-center font-bold">Aucun véhicule trouvé</p>
-                  )}
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-in fade-in" onClick={onClose}></div>
+      <div className="relative bg-[#020617] w-full max-w-3xl rounded-[3rem] shadow-2xl animate-in zoom-in-95 overflow-hidden border border-red-600/30 flex flex-col">
+        
+        {/* Header */}
+        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-black p-10 border-b border-red-600/30 shrink-0">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center text-3xl shadow-lg border border-red-400/30">
+                🚗
+              </div>
+              <div>
+                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 uppercase tracking-tight">
+                  {initialData ? 'Modifier Maintenance' : 'Maintenance Véhicule'}
+                </h3>
+                <p className="text-[10px] font-black text-red-500/50 uppercase tracking-[0.3em] mt-1">Optimisation de l'Actif Roulant</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="h-12 w-12 bg-red-950/50 border border-red-600/30 rounded-full flex items-center justify-center text-red-400/70 hover:bg-red-600/20 transition-all hover:scale-110 active:scale-90">✕</button>
+          </div>
+        </div>
+
+        <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
+
+
+
+          {/* Vehicle Selection Section */}
+          <SectionBox title="Identification de l'Unité" icon="🚗">
+             <div className="space-y-6 relative">
+                <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Ciblage du Véhicule</label>
+                <button 
+                  onClick={() => setShowVehicleSearch(!showVehicleSearch)}
+                  className="w-full bg-red-950/30 border-2 border-red-600/20 p-6 rounded-2xl outline-none font-black text-left text-red-100 hover:border-red-600/40 transition-all flex items-center justify-between group/select"
+                >
+                  <span className="tracking-tight italic text-sm">{selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plate})` : 'Rechercher une unité...'}</span>
+                  <span className="text-red-600/40 group-hover/select:translate-y-1 transition-transform">▼</span>
+                </button>
+                
+                {showVehicleSearch && (
+                  <div className="absolute top-full left-0 right-0 mt-4 bg-slate-950 border-2 border-red-600/30 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in slide-in-from-top-4">
+                    <input
+                      type="text"
+                      placeholder="Plaque, Modèle, Marque..."
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="w-full bg-red-600/[0.05] border-b border-red-600/20 p-8 outline-none font-black text-red-100 placeholder:text-red-400/20"
+                      autoFocus
+                    />
+                    <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                      {filteredVehicles.length > 0 ? (
+                        filteredVehicles.map(v => (
+                          <button
+                            key={v.id}
+                            onClick={() => handleSelectVehicle(v)}
+                            className="w-full text-left px-10 py-6 border-b border-red-600/10 hover:bg-red-600/10 transition-all flex justify-between items-center group/item"
+                          >
+                            <div>
+                               <p className="text-red-100 font-black text-lg tracking-tight">{v.make} {v.model}</p>
+                               <p className="text-[10px] text-red-400/50 font-black uppercase tracking-widest italic">{v.plate}</p>
+                            </div>
+                            <span className="text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity">→</span>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="p-10 text-red-400/30 text-center font-black uppercase text-xs tracking-widest italic">Aucun résultat cryptographique</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+             </div>
+          </SectionBox>
+
+          {/* Category Selection */}
+          <SectionBox title="Classification de Charge" icon="🔍">
+             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                {[
+                  { id: 'vidange', icon: '🛢️', label: 'Vidange' },
+                  { id: 'assurance', icon: '🛡️', label: 'Assurance' },
+                  { id: 'controle', icon: '🛠️', label: 'Contrôle' },
+                  { id: 'chaine', icon: '⛓️', label: 'Chaîne' },
+                  { id: 'autre', icon: '❓', label: 'Autre' }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setExpenseCategory(cat.id as any)}
+                    className={`flex flex-col items-center justify-center p-6 rounded-[2.2rem] border-2 transition-all duration-500 group/cat ${
+                      expenseCategory === cat.id 
+                        ? 'border-red-600 bg-red-600/10 shadow-[0_0_30px_rgba(220,38,38,0.2)] scale-105' 
+                        : 'border-red-600/10 bg-red-600/[0.02] hover:border-red-600/30 hover:bg-red-600/5'
+                    }`}
+                  >
+                    <span className="text-3xl mb-3 group-hover/cat:scale-110 transition-transform">{cat.icon}</span>
+                    <span className={`text-[9px] font-black uppercase tracking-widest ${expenseCategory === cat.id ? 'text-red-100' : 'text-red-400/40'}`}>{cat.label}</span>
+                  </button>
+                ))}
+             </div>
+          </SectionBox>
+
+          {/* Dynamic Details */}
+          <SectionBox title="Paramètres d'Exécution" icon="⚙️">
+             <div className="space-y-8">
+                {expenseCategory === 'autre' && (
+                  <FieldBox 
+                    label="Désignation" 
+                    value={formData.name} 
+                    onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} 
+                    placeholder="Ex: Lavage, Pneus, Réparation..."
+                  />
+                )}
+
+                {(expenseCategory === 'vidange' || expenseCategory === 'chaine') && (
+                  <div className="bg-red-600/[0.02] border border-red-600/20 p-8 rounded-[3rem] animate-in fade-in zoom-in-95">
+                     <FieldBox 
+                       label="Kilométrage Actuel (KM)" 
+                       type="number" 
+                       value={currentMileage} 
+                       onChange={(e: any) => setCurrentMileage(Number(e.target.value))} 
+                     />
+                     <p className="text-[9px] text-red-400/40 font-black uppercase tracking-widest mt-6 italic ml-6 leading-relaxed">⚠️ La mise à jour de ce champ synchronisera automatiquement l'odomètre du véhicule.</p>
+                  </div>
+                )}
+
+                {(expenseCategory === 'assurance' || expenseCategory === 'controle') && (
+                  <FieldBox 
+                    label="Date d'Échéance (Expiration)" 
+                    type="date" 
+                    value={expiryDate} 
+                    onChange={(e: any) => setExpiryDate(e.target.value)} 
+                  />
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                   <FieldBox 
+                     label="Coût de l'Opération (DA)" 
+                     type="number" 
+                     value={formData.cost} 
+                     onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
+                   />
+                   <FieldBox 
+                     label="Date de Facturation" 
+                     type="date" 
+                     value={formData.date} 
+                     onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
+                   />
+                </div>
+
+                 <div className="space-y-4">
+                  <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Observations (Note)</label>
+                  <textarea 
+                    value={formData.note} 
+                    onChange={e => setFormData({ ...formData, note: e.target.value })} 
+                    className="w-full bg-red-950/30 border-2 border-red-600/20 px-8 py-6 rounded-[1.5rem] outline-none focus:border-red-600/60 font-black text-red-100 transition-all min-h-[100px]" 
+                    placeholder="Détails techniques optionnels..."
+                  />
                 </div>
               </div>
-            )}
-          </div>
 
-          {selectedVehicle && (
-            <div className="bg-slate-50 border-2 border-cyan-200 p-4 rounded-[2rem]">
-              <p className="text-sm font-black text-slate-900">
-                ✅ {selectedVehicle.make} {selectedVehicle.model} - {selectedVehicle.plate}
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase">Type de Charge</label>
-            <input type="text" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" placeholder="Ex: Vidange, Réparation..." required />
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase">Montant</label>
-              <input type="number" value={formData.cost} onChange={e => setFormData({ ...formData, cost: Number(e.target.value) })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" required />
-            </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase">Date</label>
-              <input type="date" value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" required />
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-[10px] font-black text-slate-400 uppercase">📝 Note (Optionnelle)</label>
-            <textarea value={formData.note} onChange={e => setFormData({ ...formData, note: e.target.value })} className="w-full bg-slate-50 border-2 border-slate-100 p-6 rounded-[2rem] outline-none font-bold" placeholder="Ajouter une note..." rows={3} />
-          </div>
+          </SectionBox>
         </div>
 
-        <div className="flex justify-end gap-6 pt-12 mt-6">
-          <button onClick={onClose} className="px-10 py-5 rounded-[2rem] font-black uppercase text-xs">Annuler</button>
-          <button onClick={handleSubmit} className="custom-gradient-btn px-20 py-6 rounded-[2rem] text-white font-black uppercase text-xs">Enregistrer</button>
+        <div className="p-10 border-t border-red-600/20 bg-black/40 flex gap-6">
+          <button onClick={onClose} className="flex-1 py-4 bg-red-950/30 border border-red-600/30 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400/70 hover:bg-red-600/20 transition-all">
+            Annuler
+          </button>
+          <button 
+            onClick={handleSubmit} 
+            className="flex-[2] relative group overflow-hidden py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            <span className="relative z-10 text-white flex items-center justify-center gap-3">
+              <span>💾</span> Synchroniser Maintenance
+            </span>
+          </button>
         </div>
+
       </div>
     </div>
   );
 };
+
+

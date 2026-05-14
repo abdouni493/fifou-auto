@@ -2,9 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Minimal placeholder to avoid missing-file warnings during build */
+/* DARK RED PREMIUM DESIGN SYSTEM */
+:root {
+  --bg-base: #000000;
+  --bg-secondary: #0a0000;
+  --bg-tertiary: #120000;
+  --card-surface: rgba(15, 2, 2, 0.95);
+  --card-border: rgba(220, 38, 38, 0.4);
+  --card-shadow: 0 0 40px rgba(220, 38, 38, 0.15), 0 4px 24px rgba(0, 0, 0, 0.8);
+  --accent-primary: #dc2626;
+  --accent-secondary: #b91c1c;
+  --text-primary: #fee2e2;
+  --text-secondary: rgba(248, 113, 113, 0.9);
+  --text-muted: rgba(239, 68, 68, 0.4);
+  --glow-color: rgba(220, 38, 38, 0.5);
+}
+
 html, body, #root {
   height: 100%;
+  background-color: #000;
+  color: var(--text-primary);
 }
-body { margin: 0; }
+
+body {
+  margin: 0;
+  font-family: 'System UI', -apple-system, 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #000 0%, #0f0000 50%, #000 100%);
+}
+
+/* Scrollbar — dark red theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(220, 38, 38, 0.4);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(220, 38, 38, 0.7);
+}
+
+/* Animations */
+@keyframes blob {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  25% { transform: translate(20px,-50px) scale(1.1); }
+  50% { transform: translate(-20px,20px) scale(0.9); }
+  75% { transform: translate(50px,50px) scale(1.05); }
+}
+@keyframes shimmer { 0%,100%{opacity:0.5} 50%{opacity:1} }
+@keyframes redPulse { 0%,100%{box-shadow:0 0 20px rgba(220,38,38,0.3)} 50%{box-shadow:0 0 40px rgba(220,38,38,0.7)} }
+@keyframes loadbar { 0%{width:0%} 50%{width:100%} 100%{width:0%} }
+
+.animate-blob { animation: blob 7s infinite; }
+.animate-shimmer { animation: shimmer 2s infinite; }
+.animate-red-pulse { animation: redPulse 3s infinite; }
+
+.card-hover-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(220,38,38,0.25), 0 0 0 1px rgba(220,38,38,0.4);
+}
+
+/* Glass card base */
+.glass-card {
+  background: linear-gradient(to bottom, rgba(15,2,2,0.95), rgba(0,0,0,0.98));
+  border: 1px solid rgba(220,38,38,0.4);
+  backdrop-filter: blur(20px);
+  border-radius: 1.5rem;
+  box-shadow: 0 0 40px rgba(220,38,38,0.1);
+}
 

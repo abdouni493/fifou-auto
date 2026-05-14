@@ -7,7 +7,18 @@ export default {
     "./*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      animation: {
+        blob: 'blob 7s infinite',
+        'red-pulse': 'redPulse 3s infinite',
+      },
+    },
   },
   plugins: [],
+  safelist: [
+    'animate-blob',
+    'animate-red-pulse',
+    'animate-shimmer',
+  ],
 }
+

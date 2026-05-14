@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { PurchaseRecord, Language, Supplier } from '../types';
+import { PurchaseRecord, Language, Supplier, Client } from '../types';
 import { translations } from '../translations';
 import { supabase } from '../supabase';
 import { getCreatedByValue, uploadImagesToBucket } from '../utils';
 import { InvoiceEditor } from './InvoiceEditor';
+import { ClientForm } from './Clients';
 
 // Print styles - CRITICAL: Only show invoice content
 const printStyles = `
@@ -104,6 +105,14 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
   const [showCreatedDate, setShowCreatedDate] = useState(false);
   const [printRecord, setPrintRecord] = useState<PurchaseRecord | null>(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  
+  // Filtering States
+  const [searchTerm, setSearchTerm] = useState('');
+  const [supplierFilter, setSupplierFilter] = useState('all');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('newest');
+
 
   useEffect(() => {
     fetchPurchases();
@@ -121,7 +130,11 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
     try {
       const { data, error } = await supabase
         .from('purchases')
-        .select('*')
+        .select(`
+          *,
+          supplier:suppliers(name, photo_url),
+          client:clients(first_name, last_name, mobile1, photo_url)
+        `)
         .order('created_at', { ascending: false });
       if (error) throw error;
       
@@ -132,7 +145,7 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
         const normalized = {
           id: p.id,
           supplierId: p.supplier_id,
-          supplierName: p.supplier_name,
+          supplierName: p.supplier_name || p.supplier?.name || '',
           make: p.make,
           model: p.model,
           plate: p.plate,
@@ -157,7 +170,15 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
           created_by: p.created_by,
           safety: p.safety_checklist || {},
           equipment: p.equipment_checklist || {},
-          comfort: p.comfort_checklist || {}
+          comfort: p.comfort_checklist || {},
+          clientId: p.client_id,
+          clientName: p.client_name || (p.client ? `${p.client.first_name} ${p.client.last_name}` : ''),
+          clientPhone: p.client_phone || p.client?.mobile1 || '',
+          initialClientPrice: p.initial_client_price,
+          carNotes: p.car_notes || '',
+          carInfo: p.car_info || '',
+          supplier: p.supplier,
+          client: p.client
         };
         if (Object.keys(normalized.safety).length > 0) console.log(`🛡️ Loaded safety for ${normalized.make} ${normalized.model}:`, normalized.safety);
         if (Object.keys(normalized.equipment).length > 0) console.log(`🧰 Loaded equipment for ${normalized.make} ${normalized.model}:`, normalized.equipment);
@@ -204,7 +225,13 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
         created_by: data.created_by || getCreatedByValue(),
         safety_checklist: data.safety || {},
         equipment_checklist: data.equipment || {},
-        comfort_checklist: data.comfort || {}
+        comfort_checklist: data.comfort || {},
+        client_id: data.clientId || null,
+        client_name: data.clientName || '',
+        client_phone: data.clientPhone || '',
+        initial_client_price: parseFloat(data.initialClientPrice) || 0,
+        car_notes: data.carNotes || '',
+        car_info: data.carInfo || ''
       };
 
       console.log('📝 Form data before save:', {
@@ -250,90 +277,306 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
 
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40">
-      <div className="h-16 w-16 border-[6px] border-slate-100 border-t-blue-600 rounded-full animate-spin mb-8"></div>
-      <p className="font-black text-blue-600 uppercase tracking-[0.4em] text-[10px]">Ouverture du registre des achats...</p>
+      <div className="h-16 w-16 border-[6px] border-red-600/20 border-t-red-600 rounded-full animate-spin mb-8"></div>
+      <p className="font-black text-red-400 uppercase tracking-[0.4em] text-[10px]">Ouverture du registre des achats...</p>
     </div>
   );
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-1000">
-      <div className="flex justify-between items-end border-b border-slate-50 pb-8">
-        <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">{t.purchase.title}</h2>
-          <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest mt-3">Mise à jour du Stock Showroom</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative min-h-screen">
+      {/* Premium background gradient */}
+      <div className="fixed inset-0 bg-gradient-to-br from-black via-slate-950 to-black pointer-events-none -z-20"></div>
+      
+      {/* Ambient background blobs with enhanced opacity */}
+      <div className="fixed top-0 right-0 w-[600px] h-[600px] bg-red-800 rounded-full blur-[150px] opacity-[0.08] animate-blob pointer-events-none -z-10"></div>
+      <div className="fixed bottom-0 left-0 w-[500px] h-[500px] bg-red-700 rounded-full blur-[140px] opacity-[0.07] animate-blob pointer-events-none -z-10" style={{animationDelay:'2s'}}></div>
+      <div className="fixed top-1/2 left-1/3 w-[400px] h-[400px] bg-red-900 rounded-full blur-[130px] opacity-[0.05] animate-blob pointer-events-none -z-10" style={{animationDelay:'4s'}}></div>
+      
+      {/* Subtle grid overlay */}
+      <div className="fixed inset-0 bg-[linear-gradient(rgba(220,38,38,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(220,38,38,0.02)_1px,transparent_1px)] bg-[size:50px_50px] pointer-events-none -z-10"></div>
+      
+      {/* Radial gradient accent */}
+      <div className="fixed inset-0 bg-gradient-radial from-red-600/5 via-transparent to-transparent pointer-events-none -z-10"></div>
+
+      {/* HEADER SECTION */}
+      <div className="bg-gradient-to-br from-red-950 via-slate-900 to-black rounded-[3rem] p-10 md:p-16 text-white shadow-[0_0_80px_rgba(220,38,38,0.3)] overflow-hidden relative border border-red-600/40">
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(220,38,38,0.1)_0%,transparent_50%)]"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-red-600 rounded-full blur-[150px] opacity-10 pointer-events-none"></div>
+        
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+          <div>
+            <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 via-red-400 to-red-600 tracking-tight mb-3">
+              🏷️ {t.purchase.title}
+            </h1>
+            <p className="text-red-400/80 font-black text-sm uppercase tracking-[0.2em]">
+              Mise à jour du Stock Showroom • {purchases.length} Achats
+            </p>
+          </div>
+          
+          <button 
+            onClick={() => { setEditingRecord(null); setIsFormOpen(true); }}
+            className="group relative px-8 py-4 rounded-xl overflow-hidden font-black uppercase tracking-wider text-sm transition-all duration-300"
+          >
+            {/* Animated gradient background */}
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            
+            {/* Dynamic shine effect */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            
+            {/* Enhanced glow effect */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-700 via-red-500 to-red-700 rounded-xl blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300 -z-10 group-hover:animate-pulse"></div>
+            
+            {/* Content */}
+            <div className="relative z-10 flex items-center justify-center gap-3 text-white">
+              <span className="transition-all duration-300 group-hover:scale-125 group-hover:animate-bounce">➕</span>
+              <span className="transition-all duration-300 group-hover:tracking-[0.2em]">Ajouter Achat</span>
+            </div>
+          </button>
         </div>
-        <button 
-          onClick={() => { setEditingRecord(null); setIsFormOpen(true); }}
-          className="custom-gradient-btn px-14 py-5 rounded-[2.5rem] text-white font-black text-xs uppercase tracking-widest flex items-center gap-4 shadow-xl active:scale-95 transition-all"
-        >
-          <span className="text-2xl">🏷️</span> {t.purchase.addBtn}
-        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {purchases.map(p => (
-          <div key={p.id} className="bg-white rounded-[3.5rem] border border-slate-50 shadow-sm hover:shadow-2xl transition-all duration-700 flex flex-col overflow-hidden h-full group">
-            <div className="relative h-64 overflow-hidden">
-               <img 
-                 src={p.photos?.[0] || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1000'} 
-                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000" 
-                 alt={p.model} 
-               />
-               <div className="absolute top-6 right-6 bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm">
-                  <span className="text-xs font-black text-blue-600">{p.year}</span>
-               </div>
-               <div className="absolute bottom-6 left-6 bg-slate-900/80 backdrop-blur-md px-4 py-1.5 rounded-full">
-                  <span className="text-[9px] font-black text-white uppercase tracking-widest">{p.fuel} • {p.transmission}</span>
-               </div>
-               {showCreatedDate && p.created_at && (
-                  <div className="absolute bottom-6 right-6 bg-blue-600/90 backdrop-blur-md px-3 py-1.5 rounded-full">
-                    <span className="text-[9px] font-black text-white uppercase tracking-widest">📅 {new Date(p.created_at).toLocaleDateString('fr-FR')}</span>
-                  </div>
-               )}
-            </div>
-            <div className="p-8 flex flex-col flex-grow">
-               <h3 className="text-2xl font-black text-slate-900 leading-none mb-1">{p.make}</h3>
-               <p className="text-lg font-bold text-slate-400 mb-6">{p.model}</p>
-               
-               {p.created_by && (
-                  <div className="mb-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                    👤 Créé par: <span className="text-slate-700">{p.created_by}</span>
-                  </div>
-               )}
-               
-               <div className="bg-slate-50 p-6 rounded-[2.2rem] mb-8">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Prix de Vente Showroom</p>
-                  <p className="text-3xl font-black text-blue-600 tracking-tighter">
-                    {(p.sellingPrice || p.selling_price)?.toLocaleString()} <span className="text-sm font-bold opacity-40">{t.currency}</span>
-                  </p>
-               </div>
+      {/* FILTERING & SEARCH SECTION */}
+      <div className="bg-red-950/20 backdrop-blur-md rounded-[2.5rem] p-8 border border-red-600/20 shadow-xl space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Search Bar */}
+          <div className="lg:col-span-2 relative group">
+            <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl opacity-40 group-focus-within:opacity-100 transition-opacity">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Rechercher par Marque, Modèle ou VIN..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full bg-red-600/5 border border-red-600/20 pl-16 pr-8 py-5 rounded-2xl outline-none focus:border-red-600/50 focus:bg-red-600/10 font-bold text-red-100 placeholder:text-red-900/40 transition-all text-lg shadow-inner"
+            />
+          </div>
 
-               <div className="flex gap-3 mt-auto">
-                 <button 
-                   onClick={() => setDetailsRecord(p)} 
-                   className="flex-grow py-4.5 rounded-[1.5rem] bg-blue-500 text-white font-black text-[10px] uppercase tracking-widest transition-all hover:bg-blue-600"
-                 >
-                   👁️ Détails
-                 </button>
-                 <button 
-                   onClick={() => { setPrintRecord(p); setShowPrintModal(true); }}
-                   className="flex-grow py-4.5 rounded-[1.5rem] bg-green-500 text-white font-black text-[10px] uppercase tracking-widest transition-all hover:bg-green-600"
-                 >
-                   🖨️ Imprimer
-                 </button>
-                 <button 
-                   onClick={() => { setEditingRecord(p); setIsFormOpen(true); }} 
-                   className="flex-grow py-4.5 rounded-[1.5rem] bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest transition-all hover:bg-blue-600"
-                 >
-                   ✏️ Modifier
-                 </button>
-                 <button 
-                   onClick={async () => { if(confirm(t.purchase.confirmDelete)) { await supabase.from('purchases').delete().eq('id', p.id); fetchPurchases(); } }} 
-                   className="h-14 w-14 rounded-full bg-red-50 text-red-500 flex items-center justify-center hover:bg-red-500 hover:text-white transition-all shadow-sm"
-                 >
-                   🗑️
-                 </button>
-               </div>
+          {/* Supplier Filter */}
+          <div className="relative group">
+            <select 
+              value={supplierFilter}
+              onChange={(e) => setSupplierFilter(e.target.value)}
+              className="w-full bg-red-600/5 border border-red-600/20 px-8 py-5 rounded-2xl outline-none focus:border-red-600/50 focus:bg-red-600/10 font-bold text-red-100 appearance-none transition-all text-lg shadow-inner cursor-pointer"
+            >
+              <option value="all" className="bg-slate-950">Tous les Fournisseurs</option>
+              {Array.from(new Set(purchases.filter(p => p.supplierName).map(p => p.supplierName))).map(name => (
+                <option key={name} value={name} className="bg-slate-950">{name}</option>
+              ))}
+            </select>
+            <span className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 group-focus-within:opacity-100">▼</span>
+          </div>
+
+          {/* Client Source Filter */}
+          <div className="relative group">
+            <select 
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              className="w-full bg-red-600/5 border border-red-600/20 px-8 py-5 rounded-2xl outline-none focus:border-red-600/50 focus:bg-red-600/10 font-bold text-red-100 appearance-none transition-all text-lg shadow-inner cursor-pointer"
+            >
+              <option value="all" className="bg-slate-950">Toutes les Sources Clients</option>
+              {Array.from(new Set(purchases.filter(p => p.clientName).map(p => p.clientName))).map(name => (
+                <option key={name} value={name} className="bg-slate-950">{name}</option>
+              ))}
+            </select>
+            <span className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none opacity-40 group-focus-within:opacity-100">▼</span>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-6 pt-4 border-t border-red-600/10">
+          <div className="flex items-center gap-6">
+            {/* Status Tabs */}
+            <div className="flex p-1 bg-red-900/20 rounded-xl border border-red-600/20">
+              <button 
+                onClick={() => setStatusFilter('all')}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === 'all' ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/50 hover:text-red-400'}`}
+              >
+                Tout
+              </button>
+              <button 
+                onClick={() => setStatusFilter('available')}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === 'available' ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/50 hover:text-red-400'}`}
+              >
+                Disponible
+              </button>
+              <button 
+                onClick={() => setStatusFilter('sold')}
+                className={`px-6 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === 'sold' ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/50 hover:text-red-400'}`}
+              >
+                Vendu
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black text-red-400/50 uppercase tracking-widest">Trier par:</span>
+              <select 
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="bg-transparent text-[10px] font-black text-red-200 uppercase tracking-widest outline-none cursor-pointer hover:text-red-400 transition-colors"
+              >
+                <option value="newest" className="bg-slate-950">Plus Récents</option>
+                <option value="oldest" className="bg-slate-950">Plus Anciens</option>
+                <option value="price-asc" className="bg-slate-950">Prix Croissant</option>
+                <option value="price-desc" className="bg-slate-950">Prix Décroissant</option>
+              </select>
+            </div>
+          </div>
+
+          <button 
+            onClick={() => {
+              setSearchTerm('');
+              setSupplierFilter('all');
+              setClientFilter('all');
+              setStatusFilter('all');
+              setSortBy('newest');
+            }}
+            className="text-[10px] font-black text-red-400/70 uppercase tracking-widest hover:text-red-400 transition-colors flex items-center gap-2"
+          >
+            <span>🔄</span> Réinitialiser Filtres
+          </button>
+        </div>
+      </div>
+
+
+      {/* PURCHASE CARDS GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {purchases
+          .filter(p => {
+            const matchesSearch = 
+              p.make.toLowerCase().includes(searchTerm.toLowerCase()) || 
+              p.model.toLowerCase().includes(searchTerm.toLowerCase()) || 
+              p.vin.toLowerCase().includes(searchTerm.toLowerCase());
+            
+            const matchesSupplier = supplierFilter === 'all' || p.supplierName === supplierFilter;
+            const matchesClient = clientFilter === 'all' || p.clientName === clientFilter;
+            const matchesStatus = 
+              statusFilter === 'all' || 
+              (statusFilter === 'available' && !p.is_sold) || 
+              (statusFilter === 'sold' && p.is_sold);
+            
+            return matchesSearch && matchesSupplier && matchesClient && matchesStatus;
+          })
+          .sort((a, b) => {
+            if (sortBy === 'newest') return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+            if (sortBy === 'oldest') return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+            if (sortBy === 'price-asc') return (a.sellingPrice || a.selling_price) - (b.sellingPrice || b.selling_price);
+            if (sortBy === 'price-desc') return (b.sellingPrice || b.selling_price) - (a.sellingPrice || a.selling_price);
+            return 0;
+          })
+          .map((p, idx) => (
+
+          <div 
+            key={p.id} 
+            className="glass-card rounded-[2.5rem] overflow-hidden border border-red-600/40 shadow-xl shadow-red-600/10 hover:shadow-2xl hover:shadow-red-600/20 hover:scale-105 hover:-translate-y-2 transition-all duration-300 flex flex-col h-full group relative"
+            style={{ animationDelay: `${idx * 50}ms` }}
+          >
+            {/* Image Container */}
+            <div className="h-48 overflow-hidden relative bg-gradient-to-br from-red-900/50 to-black">
+              <img 
+                src={p.photo_urls?.[0] || 'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&q=80&w=1000'} 
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                alt={p.model} 
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent"></div>
+              
+              {/* Year Badge */}
+              <div className="absolute top-4 right-4 bg-red-600/50 backdrop-blur-md px-4 py-2 rounded-lg border border-red-600/60">
+                <span className="text-xs font-black text-red-100 uppercase">{p.year}</span>
+              </div>
+              
+              {/* Supplier/Client Badge */}
+              <div className="absolute top-4 left-4 flex items-center gap-2">
+                <div className="h-9 w-9 rounded-full border-2 border-red-600/40 shadow-lg overflow-hidden bg-red-600/30 backdrop-blur-md flex items-center justify-center text-sm">
+                  {(p as any).supplier?.photo_url || (p as any).client?.photo_url ? (
+                    <img 
+                      src={(p as any).supplier?.photo_url || (p as any).client?.photo_url} 
+                      className="w-full h-full object-cover" 
+                      alt="partner"
+                    />
+                  ) : (
+                    <span>👤</span>
+                  )}
+                </div>
+                <div className="bg-red-600/30 backdrop-blur-md px-3 py-1 rounded-lg border border-red-600/40">
+                  <p className="text-[8px] font-black text-red-100 uppercase tracking-widest truncate max-w-[100px]">
+                    {p.supplierName || p.clientName || '---'}
+                  </p>
+                </div>
+              </div>
+              
+              {/* Fuel & Transmission Badge */}
+              <div className="absolute bottom-4 left-4 bg-red-600/30 backdrop-blur-md px-3 py-1 rounded-lg border border-red-600/40">
+                <span className="text-[8px] font-black text-red-100 uppercase tracking-widest">{p.fuel} • {p.transmission}</span>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 flex flex-col flex-grow space-y-4">
+              {/* Make & Model */}
+              <div>
+                <h3 className="text-2xl font-black text-red-100 leading-tight">{p.make}</h3>
+                <p className="text-sm font-black text-red-400/70">{p.model}</p>
+              </div>
+
+              {/* Created By */}
+              {p.created_by && (
+                <p className="text-[10px] font-black text-red-400/50 uppercase">👤 Créé par: {p.created_by}</p>
+              )}
+
+              {/* Price Card */}
+              <div className="bg-red-600/20 p-4 rounded-[1.5rem] border border-red-600/30">
+                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Prix de Vente</p>
+                <p className="text-2xl font-black text-red-200 tracking-tighter">
+                  {(p.sellingPrice || p.selling_price)?.toLocaleString()} <span className="text-xs font-bold opacity-40">{t.currency}</span>
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 mt-auto pt-4 border-t border-red-600/20 flex-wrap">
+                <button 
+                  onClick={() => setDetailsRecord(p)} 
+                  className="flex-1 min-w-[70px] relative group overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase transition-all duration-300"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 flex items-center justify-center gap-1 text-white">
+                    <span className="transition-all duration-300 group-hover:scale-125">👁️</span>
+                    <span>Voir</span>
+                  </div>
+                </button>
+                
+                <button 
+                  onClick={() => { setPrintRecord(p); setShowPrintModal(true); }}
+                  className="flex-1 min-w-[70px] relative group overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase transition-all duration-300"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 flex items-center justify-center gap-1 text-white">
+                    <span className="transition-all duration-300 group-hover:scale-125">🖨️</span>
+                    <span>Imprimer</span>
+                  </div>
+                </button>
+                
+                <button 
+                  onClick={() => { setEditingRecord(p); setIsFormOpen(true); }} 
+                  className="flex-1 min-w-[70px] relative group overflow-hidden py-3 rounded-lg font-black text-[10px] uppercase transition-all duration-300"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 flex items-center justify-center gap-1 text-white">
+                    <span className="transition-all duration-300 group-hover:scale-125">✏️</span>
+                    <span>Modifier</span>
+                  </div>
+                </button>
+                
+                <button 
+                  onClick={async () => { if(confirm(t.purchase.confirmDelete)) { await supabase.from('purchases').delete().eq('id', p.id); fetchPurchases(); } }} 
+                  className="h-11 w-11 relative group overflow-hidden rounded-lg font-black flex items-center justify-center transition-all duration-300"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                  <div className="relative z-10 text-lg transition-all duration-300 group-hover:scale-125">🗑️</div>
+                </button>
+              </div>
             </div>
           </div>
         ))}
@@ -370,12 +613,17 @@ export const Purchase: React.FC<PurchaseProps> = ({ lang, initialEditRecord, onC
 const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (data: any) => void; initialData: PurchaseRecord | null }> = ({ lang, onClose, onSubmit, initialData }) => {
   const t = translations[lang];
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [isClientModalOpen, setIsClientModalOpen] = useState(false);
+  const [purchaseType, setPurchaseType] = useState<'supplier' | 'client'>(initialData?.clientId ? 'client' : 'supplier');
+  const [clientSearch, setClientSearch] = useState('');
   const [formData, setFormData] = useState<Partial<PurchaseRecord>>(initialData || {
-    supplierId: '', supplierName: '', make: '', model: '', year: new Date().getFullYear().toString(),
+    supplierId: '', supplierName: '', clientId: '', clientName: '', clientPhone: '',
+    make: '', model: '', year: new Date().getFullYear().toString(),
     color: '', vin: '', fuel: 'essence', transmission: 'manuelle', seats: 5, doors: 5, mileage: 0,
-    insuranceExpiry: '', techControlDate: '', insuranceCompany: '', photo_urls: [], totalCost: 0, sellingPrice: 0,
+    insuranceExpiry: '', techControlDate: '', insuranceCompany: '', photo_urls: [], 
+    totalCost: 0, sellingPrice: 0, initialClientPrice: 0, carNotes: '', carInfo: '',
     purchaseDateTime: new Date().toISOString().slice(0, 16),
-    // Inspection checklist items
     safety: {},
     equipment: {},
     comfort: {}
@@ -472,12 +720,19 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
   };
 
   useEffect(() => {
-    const fetchSuppliers = async () => {
-      const { data } = await supabase.from('suppliers').select('id, name');
-      setSuppliers(data || []);
-    };
     fetchSuppliers();
+    fetchClients();
   }, []);
+
+  const fetchSuppliers = async () => {
+    const { data } = await supabase.from('suppliers').select('*').order('name');
+    setSuppliers(data || []);
+  };
+
+  const fetchClients = async () => {
+    const { data } = await supabase.from('clients').select('*').order('first_name');
+    setClients(data || []);
+  };
 
   // Load inspection templates on component mount if form is empty
   useEffect(() => {
@@ -567,18 +822,18 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[4rem] shadow-2xl flex flex-col animate-in zoom-in-95 duration-500 border border-white">
+      <div className="relative bg-white w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[4rem] shadow-2xl flex flex-col animate-in zoom-in-95 duration-500 border border-red-600/30">
         
         {/* Header */}
         <div className="px-12 py-10 flex items-center justify-between bg-white shrink-0">
           <div className="flex items-center gap-6">
             <div className="h-16 w-16 rounded-[1.8rem] bg-blue-600 text-white flex items-center justify-center text-4xl shadow-xl">🛒</div>
             <div>
-              <h2 className="text-4xl font-black text-slate-800 tracking-tight">{initialData ? "Modifier l'Achat" : "Nouvel Achat Véhicule"}</h2>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Acquisition Showroom</p>
+              <h2 className="text-4xl font-black text-red-100 tracking-tight">{initialData ? "Modifier l'Achat" : "Nouvel Achat Véhicule"}</h2>
+              <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">Acquisition Showroom</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-14 w-14 bg-white border border-slate-100 rounded-full flex items-center justify-center text-2xl hover:bg-red-50 text-slate-400 shadow-sm">✕</button>
+          <button onClick={onClose} className="h-14 w-14 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70 shadow-sm">✕</button>
         </div>
 
         {/* Scrollable Content */}
@@ -589,57 +844,154 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
               
               {/* SECTION 1: SOURCE & IDENTITÉ */}
               <Section title="Source & Identité" icon="🤝">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="sm:col-span-2 space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Partenaire Fournisseur</label>
-                       <select 
-                         name="supplierId" 
-                         value={formData.supplierId} 
-                         onChange={handleSupplierChange}
-                         className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-5 rounded-[2rem] outline-none focus:border-blue-500 font-bold text-slate-800 appearance-none shadow-inner text-lg"
-                       >
-                         <option value="">Sélectionner un fournisseur...</option>
-                         {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                       </select>
+                 <div className="space-y-6">
+                    {/* Source Switcher */}
+                    <div className="space-y-2">
+                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Origine du Véhicule</label>
+                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
+                          <button 
+                            type="button" 
+                            onClick={() => setPurchaseType('supplier')} 
+                            className={`flex-1 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${purchaseType === 'supplier' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}
+                          >
+                             <span>🏢</span> Fournisseur
+                          </button>
+                          <button 
+                            type="button" 
+                            onClick={() => setPurchaseType('client')} 
+                            className={`flex-1 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${purchaseType === 'client' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}
+                          >
+                             <span>👤</span> Client Showroom
+                          </button>
+                       </div>
                     </div>
-                    <Field label="Marque" name="make" value={formData.make} onChange={handleChange} />
-                    <Field label="Modèle" name="model" value={formData.model} onChange={handleChange} />
-                    <Field label="Année" name="year" value={formData.year} onChange={handleChange} />
-                    <Field label="Couleur" name="color" value={formData.color} onChange={handleChange} />
-                    <div className="sm:col-span-2">
-                      <Field label="Numéro de Châssis (VIN)" name="vin" value={formData.vin} onChange={handleChange} />
+
+                    {purchaseType === 'supplier' ? (
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Partenaire Fournisseur</label>
+                         <select 
+                           name="supplierId" 
+                           value={formData.supplierId} 
+                           onChange={handleSupplierChange}
+                           className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 appearance-none shadow-inner text-lg"
+                         >
+                           <option value="">Sélectionner un fournisseur...</option>
+                           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                         </select>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                         <div className="flex items-center justify-between px-3">
+                           <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Choisir un Client</label>
+                           <button 
+                             type="button" 
+                             onClick={() => setIsClientModalOpen(true)}
+                             className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:underline"
+                           >
+                             + Nouveau Client
+                           </button>
+                         </div>
+                         <div className="relative group/search">
+                           <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl opacity-20">🔍</span>
+                           <input 
+                             type="text" 
+                             placeholder="Rechercher par nom ou téléphone..." 
+                             value={clientSearch}
+                             onChange={(e) => setClientSearch(e.target.value)}
+                             className="w-full bg-slate-50 border-2 border-red-600/20 pl-16 pr-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-inner"
+                           />
+                           {clientSearch && (
+                             <div className="absolute top-full left-0 right-0 mt-2 glass-card border border-red-600/30 rounded-3xl shadow-2xl z-[150] max-h-60 overflow-y-auto custom-scrollbar p-2">
+                               {clients.filter(c => 
+                                 `${c.first_name} ${c.last_name}`.toLowerCase().includes(clientSearch.toLowerCase()) || 
+                                 c.mobile1.includes(clientSearch)
+                               ).map(c => (
+                                 <button 
+                                   key={c.id} 
+                                   type="button"
+                                   onClick={() => {
+                                     setFormData({
+                                       ...formData, 
+                                       clientId: c.id, 
+                                       clientName: `${c.first_name} ${c.last_name}`,
+                                       clientPhone: c.mobile1,
+                                       supplierId: '',
+                                       supplierName: ''
+                                     });
+                                     setClientSearch(`${c.first_name} ${c.last_name}`);
+                                   }}
+                                   className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl flex items-center gap-4 transition-colors"
+                                 >
+                                   <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-lg">
+                                     {c.photo_url ? <img src={c.photo_url} className="w-full h-full object-cover rounded-full" /> : '👤'}
+                                   </div>
+                                   <div>
+                                     <p className="font-black text-red-100 text-sm">{c.first_name} {c.last_name}</p>
+                                     <p className="text-[10px] font-bold text-red-400/70">{c.mobile1}</p>
+                                   </div>
+                                 </button>
+                               ))}
+                             </div>
+                           )}
+                         </div>
+                         {formData.clientId && (
+                           <div className="bg-blue-50 border border-red-600/30 p-4 rounded-2xl flex items-center justify-between">
+                             <div className="flex items-center gap-3">
+                               <span className="text-xl">✅</span>
+                               <div>
+                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Client Sélectionné</p>
+                                 <p className="font-black text-blue-700">{formData.clientName}</p>
+                               </div>
+                             </div>
+                             <button type="button" onClick={() => setFormData({...formData, clientId: '', clientName: '', clientPhone: ''})} className="text-blue-400 hover:text-red-500">✕</button>
+                           </div>
+                         )}
+                      </div>
+                    )}
+
+                    <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                      <Field label="Marque" name="make" value={formData.make} onChange={handleChange} placeholder="ex: Mercedes-Benz" emoji="🏷️" />
+                      <Field label="Modèle" name="model" value={formData.model} onChange={handleChange} placeholder="ex: S-Class" emoji="🚗" />
+                      <Field label="Immatriculation" name="plate" value={formData.plate} onChange={handleChange} placeholder="ex: 12345-123-16" emoji="🔢" />
+                      <Field label="Année" name="year" value={formData.year} onChange={handleChange} placeholder="2026" emoji="📅" />
+                      <div className="col-span-2">
+                        <Field label="Couleur" name="color" value={formData.color} onChange={handleChange} placeholder="ex: Obsidian Black" emoji="🎨" />
+                      </div>
+                      <div className="col-span-2">
+                        <Field label="Numéro de Châssis (VIN)" name="vin" value={formData.vin} onChange={handleChange} emoji="🔐" />
+                      </div>
                     </div>
                  </div>
               </Section>
 
               {/* SECTION 2: CARACTÉRISTIQUES */}
-              <Section title="Caractéristiques" icon="⚙️">
+              <Section title="Fiche Technique" icon="⚙️">
                  <div className="grid grid-cols-2 gap-6">
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Transmission</label>
-                       <div className="flex p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
-                          {['manuelle', 'auto'].map(t => (
-                            <button key={t} type="button" onClick={() => setFormData({...formData, transmission: t as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.transmission === t ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>
+                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Boîte de Vitesse</label>
+                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
+                          {['Manuelle', 'Automatique'].map(t => (
+                            <button key={t} type="button" onClick={() => setFormData({...formData, transmission: (t === 'Automatique' ? 'auto' : t.toLowerCase()) as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.transmission === (t === 'Automatique' ? 'auto' : t.toLowerCase()) ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>
                                {t}
                             </button>
                           ))}
                        </div>
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Énergie</label>
-                       <div className="flex p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
-                          {['essence', 'diesel'].map(e => (
-                            <button key={e} type="button" onClick={() => setFormData({...formData, fuel: e as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.fuel === e ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-400'}`}>
+                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Énergie</label>
+                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
+                          {['Essence', 'Diesel'].map(e => (
+                            <button key={e} type="button" onClick={() => setFormData({...formData, fuel: e.toLowerCase() as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.fuel === e.toLowerCase() ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>
                                {e}
                             </button>
                           ))}
                        </div>
                     </div>
-                    <Field label="Kilométrage" name="mileage" type="number" value={formData.mileage} onChange={handleChange} />
                     <div className="grid grid-cols-2 gap-4">
-                       <Field label="Seats" name="seats" type="number" value={formData.seats} onChange={handleChange} />
-                       <Field label="Doors" name="doors" type="number" value={formData.doors} onChange={handleChange} />
+                       <Field label="Places" name="seats" type="number" value={formData.seats} onChange={handleChange} placeholder="5" emoji="👥" />
+                       <Field label="Portes" name="doors" type="number" value={formData.doors} onChange={handleChange} emoji="🚪" />
                     </div>
+                    <Field label="Kilométrage" name="mileage" type="number" value={formData.mileage} onChange={handleChange} placeholder="0" emoji="📊" />
                  </div>
               </Section>
 
@@ -647,12 +999,12 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
               <Section title="Média & Visuels" icon="📸">
                  <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                     {formData.photo_urls?.map((p, i) => (
-                      <div key={i} className="h-44 w-36 shrink-0 rounded-[2.5rem] border-[4px] border-white shadow-xl overflow-hidden group/img relative">
+                      <div key={i} className="h-44 w-36 shrink-0 rounded-[2.5rem] border-[4px] border-red-600/30 shadow-xl overflow-hidden group/img relative">
                          <img src={p} className="w-full h-full object-cover" />
                          <button onClick={() => setFormData({...formData, photo_urls: formData.photo_urls?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-7 w-7 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
                       </div>
                     ))}
-                    <label className="h-44 w-36 shrink-0 rounded-[2.5rem] border-2 border-dashed border-slate-200 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 hover:border-blue-500 transition-all text-blue-500">
+                    <label className="h-44 w-36 shrink-0 rounded-[2.5rem] border-2 border-dashed border-red-600/30 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 hover:border-red-600 transition-all text-red-600">
                        <input type="file" multiple className="hidden" onChange={handlePhotos} />
                        <span className="text-4xl">➕</span>
                     </label>
@@ -660,42 +1012,52 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
               </Section>
 
               {/* SECTION 4: ADMINISTRATION */}
-              <Section title="Administration" icon="📜">
+              <Section title="Administration & Prix" icon="📜">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <details className="sm:col-span-2 space-y-4">
-                      <summary className="cursor-pointer text-[10px] font-black text-slate-600 uppercase tracking-widest ml-3 pb-4 border-b border-slate-100">
-                        📋 Informations d'Assurance (Optionnel)
-                      </summary>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-4">
-                        <Field label="Expiration Assurance" name="insuranceExpiry" type="date" value={formData.insuranceExpiry} onChange={handleChange} />
-                        <Field label="Contrôle Technique" name="techControlDate" type="date" value={formData.techControlDate} onChange={handleChange} />
-                        <div className="sm:col-span-2">
-                           <Field label="Compagnie d'Assurance" name="insuranceCompany" value={formData.insuranceCompany} onChange={handleChange} placeholder="Ex: SAA, AXA..." />
-                        </div>
-                      </div>
-                    </details>
+                    <div className="sm:col-span-2 grid grid-cols-1 gap-6">
+                       <TextAreaField 
+                         label="Informations supplémentaires" 
+                         name="carInfo" 
+                         value={formData.carInfo} 
+                         onChange={(e: any) => setFormData({...formData, carInfo: e.target.value})}
+                         placeholder="Carrosserie, accidents, état général..."
+                         emoji="ℹ️"
+                         minHeight="120px"
+                       />
+                       <TextAreaField 
+                         label="Notes internes" 
+                         name="carNotes" 
+                         value={formData.carNotes} 
+                         onChange={(e: any) => setFormData({...formData, carNotes: e.target.value})}
+                         placeholder="Notes pour le showroom..."
+                         emoji="📝"
+                         minHeight="100px"
+                       />
+                    </div>
+
+                    <div className="sm:col-span-2 pt-4 border-t border-red-600/20">
+                       <Field label="Date & Heure d'Achat" name="purchaseDateTime" type="datetime-local" value={formData.purchaseDateTime} onChange={handleChange} emoji="⏰" />
+                    </div>
                     
-                    <details className="sm:col-span-2 space-y-4">
-                      <summary className="cursor-pointer text-[10px] font-black text-slate-600 uppercase tracking-widest ml-3 pb-4 border-b border-slate-100">
-                        ⏰ Date et Heure d'Achat
-                      </summary>
-                      <div className="pt-4">
-                        <Field label="Date & Heure d'Achat" name="purchaseDateTime" type="datetime-local" value={formData.purchaseDateTime} onChange={handleChange} />
-                      </div>
-                    </details>
-                    
-                    <div className="sm:col-span-2 grid grid-cols-2 gap-6 pt-6 border-t border-slate-50">
+                    <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-50">
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Investissement Initial (Achat)</label>
+                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>💰</span> Prix Initial Client</label>
                           <div className="relative">
-                            <input type="number" name="totalCost" value={formData.totalCost} onChange={handleChange} className="w-full bg-slate-50 border-2 border-slate-100 px-8 py-5 rounded-[2rem] outline-none focus:border-red-500 font-black text-red-600 text-xl shadow-inner" />
+                            <input type="number" name="initialClientPrice" value={formData.initialClientPrice} onChange={handleChange} className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-amber-500 font-black text-amber-600 text-xl shadow-inner" />
                             <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-slate-300">DA</span>
                           </div>
                        </div>
                        <div className="space-y-2">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">Prix de Vente Showroom</label>
+                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>🏷️</span> Coût Total Achat</label>
                           <div className="relative">
-                            <input type="number" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="w-full bg-blue-50 border-2 border-blue-100 px-8 py-5 rounded-[2rem] outline-none focus:border-blue-500 font-black text-blue-600 text-2xl shadow-inner" />
+                            <input type="number" name="totalCost" value={formData.totalCost} onChange={handleChange} className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-500 font-black text-red-600 text-xl shadow-inner" />
+                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-slate-300">DA</span>
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>💵</span> Prix de Vente Showroom</label>
+                          <div className="relative">
+                            <input type="number" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="w-full bg-blue-50 border-2 border-red-600/30 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-black text-red-400 text-2xl shadow-inner" />
                             <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-blue-300">DA</span>
                           </div>
                        </div>
@@ -712,7 +1074,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 pb-4 border-b-2 border-blue-200">
                     <span className="text-2xl">🛡️</span>
-                    <h5 className="text-sm font-black text-slate-800 uppercase tracking-widest">Contrôle Sécurité</h5>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Contrôle Sécurité</h5>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {/* Template Safety Items */}
@@ -728,7 +1090,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                             })}
                             className="w-5 h-5 rounded cursor-pointer"
                           />
-                          <span className="text-sm font-bold text-slate-700">{key}</span>
+                          <span className="text-sm font-bold text-red-100">{key}</span>
                         </label>
                         <button
                           type="button"
@@ -757,7 +1119,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                           addCustomItem('safety', newSafetyItem);
                         }
                       }}
-                      className="flex-1 px-4 py-2 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-blue-500 text-sm"
+                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-red-600 text-sm"
                     />
                     <button
                       type="button"
@@ -773,7 +1135,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                 <div className="space-y-4 pt-6">
                   <div className="flex items-center gap-3 pb-4 border-b-2 border-green-200">
                     <span className="text-2xl">🧰</span>
-                    <h5 className="text-sm font-black text-slate-800 uppercase tracking-widest">Dotation Bord</h5>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Dotation Bord</h5>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {/* Template Equipment Items */}
@@ -789,7 +1151,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                             })}
                             className="w-5 h-5 rounded cursor-pointer"
                           />
-                          <span className="text-sm font-bold text-slate-700">{key}</span>
+                          <span className="text-sm font-bold text-red-100">{key}</span>
                         </label>
                         <button
                           type="button"
@@ -818,7 +1180,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                           addCustomItem('equipment', newEquipmentItem);
                         }
                       }}
-                      className="flex-1 px-4 py-2 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-green-500 text-sm"
+                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-green-500 text-sm"
                     />
                     <button
                       type="button"
@@ -834,7 +1196,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                 <div className="space-y-4 pt-6">
                   <div className="flex items-center gap-3 pb-4 border-b-2 border-purple-200">
                     <span className="text-2xl">✨</span>
-                    <h5 className="text-sm font-black text-slate-800 uppercase tracking-widest">État & Ambiance</h5>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">État & Ambiance</h5>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {/* Template Comfort Items */}
@@ -850,7 +1212,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                             })}
                             className="w-5 h-5 rounded cursor-pointer"
                           />
-                          <span className="text-sm font-bold text-slate-700">{key}</span>
+                          <span className="text-sm font-bold text-red-100">{key}</span>
                         </label>
                         <button
                           type="button"
@@ -879,7 +1241,7 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                           addCustomItem('comfort', newComfortItem);
                         }
                       }}
-                      className="flex-1 px-4 py-2 border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-purple-500 text-sm"
+                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-purple-500 text-sm"
                     />
                     <button
                       type="button"
@@ -898,19 +1260,47 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
 
         {/* Footer */}
         <div className="px-12 py-10 bg-white border-t border-slate-50 flex items-center justify-center gap-8 shrink-0">
-          <button onClick={onClose} className="px-16 py-5 bg-white border border-slate-100 rounded-[2.5rem] font-black text-[11px] uppercase tracking-widest text-slate-400 hover:bg-slate-50">Annuler</button>
+          <button onClick={onClose} className="px-16 py-5 glass-card border border-red-600/30 rounded-[2.5rem] font-black text-[11px] uppercase tracking-widest text-red-400/70 hover:bg-slate-50">Annuler</button>
           <button onClick={() => { console.log('Submitting form data:', formData); onSubmit(formData); }} className="custom-gradient-btn px-24 py-5 rounded-[2.5rem] text-white font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Enregistrer le véhicule</button>
         </div>
+
+        {/* Client Creation Modal */}
+        {isClientModalOpen && (
+          <ClientForm 
+            onClose={() => setIsClientModalOpen(false)} 
+            onSubmit={async (newClientData) => {
+              try {
+                const { data, error } = await supabase.from('clients').insert([newClientData]).select();
+                if (error) throw error;
+                if (data && data[0]) {
+                  await fetchClients();
+                  setFormData({
+                    ...formData,
+                    clientId: data[0].id,
+                    clientName: `${data[0].first_name} ${data[0].last_name}`,
+                    clientPhone: data[0].mobile1,
+                    supplierId: '',
+                    supplierName: ''
+                  });
+                  setClientSearch(`${data[0].first_name} ${data[0].last_name}`);
+                }
+                setIsClientModalOpen(false);
+              } catch (err: any) {
+                alert(`Erreur lors de la création du client: ${err.message}`);
+              }
+            }} 
+          />
+        )}
       </div>
     </div>
   );
 };
 
 const Section: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
-  <div className="bg-[#fcfcfc] rounded-[3.5rem] p-10 space-y-8 border border-slate-100/50">
+  <div className="bg-[#fcfcfc] rounded-[3.5rem] p-10 space-y-8 border border-red-600/20/50">
      <div className="flex items-center gap-6">
-        <div className="h-12 w-12 rounded-2xl bg-white text-slate-900 flex items-center justify-center text-2xl shadow-sm border border-slate-100">{icon}</div>
-        <h4 className="text-xl font-black text-slate-800 tracking-tight">{title}</h4>
+        <div className="h-12 w-12 rounded-2xl bg-white text-red-100 flex items-center justify-center text-2xl shadow-sm border border-red-600/20">{icon}</div>
+        <h4 className="text-xl font-black text-red-100 tracking-tight">{title}</h4>
      </div>
      <div>{children}</div>
   </div>
@@ -920,11 +1310,14 @@ const Section: React.FC<{ title: string; icon: string; children: React.ReactNode
 const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => void; lang: Language }> = ({ purchase, onClose, lang }) => {
   const t = translations[lang];
   console.log('PurchaseDetailsModal received:', purchase);
-  const totalCost = purchase.totalCost || purchase.total_cost || 0;
-  const sellingPrice = purchase.sellingPrice || purchase.selling_price || 0;
-  const supplierName = purchase.supplierName || purchase.supplier_name || 'N/A';
+  const totalCost = purchase.totalCost || 0;
+  const sellingPrice = purchase.sellingPrice || 0;
+  const initialClientPrice = purchase.initialClientPrice || 0;
+  const supplierName = purchase.supplierName || 'N/A';
+  const clientName = purchase.clientName || 'N/A';
   const createdBy = purchase.created_by || 'N/A';
   const profit = sellingPrice - totalCost;
+  const partnerPhoto = (purchase as any).supplier?.photo_url || (purchase as any).client?.photo_url;
 
   return (
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -932,22 +1325,46 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
       <div className="relative bg-white w-full max-w-3xl rounded-[4rem] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[90vh]">
         
         {/* Header */}
-        <div className="px-12 py-10 flex items-center justify-between bg-white border-b border-slate-100 shrink-0">
+        <div className="px-12 py-10 flex items-center justify-between bg-white border-b border-red-600/20 shrink-0">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">
+            <h2 className="text-3xl font-black text-red-100 tracking-tight">
               {purchase.make} {purchase.model}
             </h2>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2">Détails Complets de l'Achat</p>
+            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-2">Détails Complets de l'Achat</p>
           </div>
-          <button onClick={onClose} className="h-14 w-14 bg-slate-50 rounded-full flex items-center justify-center text-2xl hover:bg-red-50 text-slate-400 transition-all">✕</button>
+          <button onClick={onClose} className="h-14 w-14 bg-slate-50 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70 transition-all">✕</button>
         </div>
 
         {/* Scrollable Content */}
         <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 space-y-8">
           
+          {/* Partner Info */}
+          <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-red-600/30 flex items-center gap-6">
+            <div className="h-24 w-24 rounded-[2rem] bg-white border-2 border-red-600/30 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+              {partnerPhoto ? (
+                <img src={partnerPhoto} className="w-full h-full object-cover" alt="Partner" />
+              ) : (
+                <span className="text-4xl">👤</span>
+              )}
+            </div>
+            <div>
+              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
+                {purchase.clientId ? 'Client Showroom' : 'Partenaire Fournisseur'}
+              </p>
+              <h3 className="text-2xl font-black text-blue-900 tracking-tight">
+                {purchase.clientId ? clientName : supplierName}
+              </h3>
+              {purchase.clientPhone && (
+                <p className="text-sm font-bold text-red-400/60 mt-1">{purchase.clientPhone}</p>
+              ) || (purchase as any).supplier?.mobile && (
+                <p className="text-sm font-bold text-red-400/60 mt-1">{(purchase as any).supplier?.mobile}</p>
+              )}
+            </div>
+          </div>
+
           {/* Creation Info */}
-          <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-            <h3 className="text-lg font-black text-slate-900 mb-4">📝 Informations d'Enregistrement</h3>
+          <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
+            <h3 className="text-lg font-black text-red-100 mb-4">📝 Informations d'Enregistrement</h3>
             <div className="grid grid-cols-2 gap-4">
               <DetailItem label="Créé par" value={createdBy} icon="👤" />
               {purchase.created_at && (
@@ -959,10 +1376,10 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
           {/* Photos Gallery */}
           {purchase.photo_urls && purchase.photo_urls.length > 0 && (
             <div>
-              <h3 className="text-lg font-black text-slate-900 mb-4">📸 Photos du Véhicule</h3>
+              <h3 className="text-lg font-black text-red-100 mb-4">📸 Photos du Véhicule</h3>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {purchase.photo_urls.map((photo, idx) => (
-                  <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-full h-40 object-cover rounded-2xl border border-slate-200 shadow-sm" />
+                  <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-full h-40 object-cover rounded-2xl border border-red-600/30 shadow-sm" />
                 ))}
               </div>
             </div>
@@ -970,7 +1387,7 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
 
           {/* Vehicle Information */}
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">🚗 Informations Véhicule</h3>
+            <h3 className="text-lg font-black text-red-100 mb-4">🚗 Informations Véhicule</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <DetailItem label="Marque" value={purchase.make} />
               <DetailItem label="Modèle" value={purchase.model} />
@@ -984,66 +1401,81 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
               <DetailItem label="Portes" value={purchase.doors.toString()} />
               <DetailItem label="Places" value={purchase.seats.toString()} />
             </div>
+            {purchase.carInfo && (
+              <div className="mt-6 bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
+                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Informations Complémentaires</p>
+                <p className="text-red-100 font-bold leading-relaxed whitespace-pre-wrap">{purchase.carInfo}</p>
+              </div>
+            )}
+            {purchase.carNotes && (
+              <div className="mt-4 bg-amber-50 p-6 rounded-2xl border border-amber-100">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Notes Internes</p>
+                <p className="text-amber-800 font-bold italic whitespace-pre-wrap">{purchase.carNotes}</p>
+              </div>
+            )}
           </div>
 
-          {/* Supplier Information */}
+          {/* Partner Details */}
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">🤝 Information Fournisseur</h3>
-            <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-              <p className="text-sm font-bold text-slate-900 mb-2">Nom du Fournisseur</p>
-              <p className="text-lg font-black text-blue-600">{supplierName}</p>
+            <h3 className="text-lg font-black text-red-100 mb-4">🤝 Information {purchase.clientId ? 'Client' : 'Fournisseur'}</h3>
+            <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Nom Complet</p>
+                <p className="text-lg font-black text-red-400">{purchase.clientId ? clientName : supplierName}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Téléphone</p>
+                <p className="text-lg font-black text-red-100">{purchase.clientPhone || (purchase as any).supplier?.mobile || 'N/A'}</p>
+              </div>
             </div>
           </div>
 
-          {/* Insurance & Technical Information */}
-          <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">📋 Informations d'Assurance & Technique</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <DetailItem label="Compagnie Assurance" value={purchase.insuranceCompany || 'N/A'} />
-              <DetailItem label="Expiration Assurance" value={purchase.insuranceExpiry ? new Date(purchase.insuranceExpiry).toLocaleDateString('fr-FR') : 'N/A'} icon="📅" />
-              <DetailItem label="Contrôle Technique" value={purchase.techControlDate ? new Date(purchase.techControlDate).toLocaleDateString('fr-FR') : 'N/A'} icon="📅" />
-            </div>
-          </div>
 
           {/* Purchase Date & Time */}
           {purchase.purchaseDateTime && (
             <div>
-              <h3 className="text-lg font-black text-slate-900 mb-4">⏰ Date & Heure d'Achat</h3>
-              <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200">
-                <p className="text-sm font-bold text-slate-600 mb-2">Acheté le</p>
-                <p className="text-lg font-black text-slate-900">{new Date(purchase.purchaseDateTime).toLocaleDateString('fr-FR')} à {new Date(purchase.purchaseDateTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
+              <h3 className="text-lg font-black text-red-100 mb-4">⏰ Date & Heure d'Achat</h3>
+              <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
+                <p className="text-sm font-bold text-red-400/70 mb-2">Acheté le</p>
+                <p className="text-lg font-black text-red-100">{new Date(purchase.purchaseDateTime).toLocaleDateString('fr-FR')} à {new Date(purchase.purchaseDateTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
               </div>
             </div>
           )}
 
           {/* Financial Information */}
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">💰 Informations Financières</h3>
-            <div className="space-y-4">
-              <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
-                <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Coût d'Achat</p>
-                <p className="text-3xl font-black text-red-600">{totalCost.toLocaleString()} <span className="text-sm font-bold text-red-400">{t.currency}</span></p>
+            <h3 className="text-lg font-black text-red-100 mb-4">💰 Informations Financières</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
+                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Prix Initial Client</p>
+                <p className="text-2xl font-black text-amber-600">{initialClientPrice.toLocaleString()} <span className="text-xs font-bold text-amber-400">DA</span></p>
               </div>
               
-              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200">
-                <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest mb-2">Prix de Vente Showroom</p>
-                <p className="text-3xl font-black text-blue-600">{sellingPrice.toLocaleString()} <span className="text-sm font-bold text-blue-400">{t.currency}</span></p>
+              <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
+                <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Coût Total Achat</p>
+                <p className="text-2xl font-black text-red-600">{totalCost.toLocaleString()} <span className="text-xs font-bold text-red-400">DA</span></p>
+              </div>
+              
+              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200 md:col-span-2">
+                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Prix de Vente Showroom</p>
+                <p className="text-3xl font-black text-red-400">{sellingPrice.toLocaleString()} <span className="text-sm font-bold text-blue-400">DA</span></p>
               </div>
 
-              <div className={`p-6 rounded-2xl border-2 ${profit >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {profit >= 0 ? 'Bénéfice Potentiel' : 'Perte Potentielle'}
+              <div className={`p-6 rounded-2xl border-2 md:col-span-2 ${profit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
+                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {profit >= 0 ? 'Marge Brute Estimée' : 'Déficit Estimé'}
                 </p>
-                <p className={`text-3xl font-black ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {Math.abs(profit).toLocaleString()} <span className="text-sm font-bold opacity-50">{t.currency}</span>
+                <p className={`text-3xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {Math.abs(profit).toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span>
                 </p>
               </div>
             </div>
           </div>
+          
 
           {/* Additional Dates */}
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">📍 Dates Importantes</h3>
+            <h3 className="text-lg font-black text-red-100 mb-4">📍 Dates Importantes</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <DetailItem 
                 label="Date d'Ajout" 
@@ -1055,7 +1487,7 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
 
           {/* Inspection Checklists */}
           <div>
-            <h3 className="text-lg font-black text-slate-900 mb-4">✓ Contrôle de Qualité</h3>
+            <h3 className="text-lg font-black text-red-100 mb-4">✓ Contrôle de Qualité</h3>
             
             {/* Safety Checklist */}
             {purchase.safety && Object.keys(purchase.safety).length > 0 && (
@@ -1067,7 +1499,7 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
                       <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
                         {value ? '✓' : '✕'}
                       </span>
-                      <span className="text-sm font-bold text-slate-900">{key}</span>
+                      <span className="text-sm font-bold text-red-100">{key}</span>
                     </div>
                   ))}
                 </div>
@@ -1084,7 +1516,7 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
                       <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
                         {value ? '✓' : '✕'}
                       </span>
-                      <span className="text-sm font-bold text-slate-900">{key}</span>
+                      <span className="text-sm font-bold text-red-100">{key}</span>
                     </div>
                   ))}
                 </div>
@@ -1101,7 +1533,7 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
                       <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
                         {value ? '✓' : '✕'}
                       </span>
-                      <span className="text-sm font-bold text-slate-900">{key}</span>
+                      <span className="text-sm font-bold text-red-100">{key}</span>
                     </div>
                   ))}
                 </div>
@@ -1112,15 +1544,15 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
             {(!purchase.safety || Object.keys(purchase.safety).length === 0) &&
              (!purchase.equipment || Object.keys(purchase.equipment).length === 0) &&
              (!purchase.comfort || Object.keys(purchase.comfort).length === 0) && (
-              <div className="bg-slate-100 p-6 rounded-2xl border border-slate-200 text-center">
-                <p className="text-sm font-bold text-slate-500">Aucun contrôle enregistré pour ce véhicule</p>
+              <div className="bg-red-950/30 p-6 rounded-2xl border border-red-600/30 text-center">
+                <p className="text-sm font-bold text-red-400/70">Aucun contrôle enregistré pour ce véhicule</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="px-12 py-8 bg-slate-50 border-t border-slate-100 flex justify-end gap-4 shrink-0">
+        <div className="px-12 py-8 bg-slate-50 border-t border-red-600/20 flex justify-end gap-4 shrink-0">
           <button 
             onClick={onClose}
             className="px-10 py-4 rounded-2xl bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all"
@@ -1135,29 +1567,46 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
 
 // Detail Item Component
 const DetailItem: React.FC<{ label: string; value: string; icon?: string }> = ({ label, value, icon }) => (
-  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+  <div className="bg-red-600/20 p-4 rounded-2xl border border-red-600/30">
+    <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2 flex items-center gap-2">
       {icon && <span>{icon}</span>}
       {label}
     </p>
-    <p className="text-sm font-bold text-slate-900 truncate">{value}</p>
+    <p className="text-sm font-bold text-red-100 truncate">{value}</p>
   </div>
 );
 
-const Field: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; placeholder?: string }> = ({ label, name, value, onChange, type = 'text', placeholder }) => (
+const Field: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; placeholder?: string; emoji?: string }> = ({ label, name, value, onChange, type = 'text', placeholder, emoji = '📝' }) => (
   <div className="space-y-2">
-     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-3">{label}</label>
-     <input 
-       type={type} 
-       name={name} 
-       value={value} 
-       onChange={onChange} 
-       placeholder={placeholder}
-       className="w-full bg-white border-2 border-slate-100 px-8 py-4.5 rounded-[2rem] outline-none focus:border-blue-500 font-bold text-slate-800 shadow-sm transition-all text-lg" 
-     />
+     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2">
+       <span>{emoji}</span> {label}
+     </label>
+      <input 
+        type={type} 
+        name={name} 
+        value={value ?? ''} 
+        onChange={onChange} 
+        placeholder={placeholder}
+        className="w-full bg-white border-2 border-red-600/20 px-8 py-4.5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg" 
+      />
   </div>
 );
 
+const TextAreaField: React.FC<{ label: string; name: string; value: any; onChange: any; placeholder?: string; emoji?: string; minHeight?: string }> = ({ label, name, value, onChange, placeholder, emoji = '📝', minHeight = '100px' }) => (
+  <div className="space-y-2">
+     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2">
+       <span>{emoji}</span> {label}
+     </label>
+      <textarea 
+        name={name} 
+        value={value ?? ''} 
+        onChange={onChange} 
+        placeholder={placeholder}
+        style={{ minHeight }}
+        className="w-full bg-white border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg resize-none" 
+      />
+  </div>
+);
 interface PrintInvoiceModalProps {
   purchase: PurchaseRecord;
   lang: Language;
@@ -1165,9 +1614,10 @@ interface PrintInvoiceModalProps {
 }
 
 const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({ purchase, lang, onClose }) => {
-  const t = translations[lang];
   const [showroom, setShowroom] = useState<any>(null);
   const [isPersonalizing, setIsPersonalizing] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<'fr' | 'ar' | null>(null);
+  const [printPreview, setPrintPreview] = useState<string>('');
 
   useEffect(() => {
     const fetchShowroomConfig = async () => {
@@ -1177,216 +1627,364 @@ const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({ purchase, lang, o
     fetchShowroomConfig();
   }, []);
 
-  const handlePrintNow = () => {
-    if (!showroom) return;
+  const generateInvoiceHTML = (invoiceLang: 'fr' | 'ar') => {
+    if (!showroom) return '';
 
+    const isArabic = invoiceLang === 'ar';
+    const direction = isArabic ? 'rtl' : 'ltr';
+    
+    const labels = {
+      invoiceTitle: isArabic ? 'فاتورة الشراء' : 'Facture d\'Achat',
+      showroomInfo: isArabic ? 'معلومات المعرض' : 'Informations Showroom',
+      supplierInfo: isArabic ? 'معلومات الموردين' : 'Fournisseur',
+      vehicleDetails: isArabic ? 'تفاصيل المركبة' : 'Détails du Véhicule',
+      inspectionTitle: isArabic ? 'تقرير الفحص' : 'Rapport d\'Inspection',
+      safetySection: isArabic ? 'أنظمة الأمان' : 'Sécurité & Protection',
+      equipmentSection: isArabic ? 'التجهيزات' : 'Équipements & Options',
+      comfortSection: isArabic ? 'الحالة العامة' : 'État & Confort',
+      make: isArabic ? 'الماركة والموديل' : 'Marque & Modèle',
+      year: isArabic ? 'السنة' : 'Année',
+      color: isArabic ? 'اللون' : 'Couleur',
+      vin: isArabic ? 'رقم الهيكل' : 'VIN/Châssis',
+      plate: isArabic ? 'لوحة الترخيص' : 'Immatriculation',
+      mileage: isArabic ? 'المسافة المقطوعة' : 'Kilométrage',
+      fuel: isArabic ? 'الوقود' : 'Carburant',
+      transmission: isArabic ? 'ناقل الحركة' : 'Transmission',
+      seatsAndDoors: isArabic ? 'المقاعد/الأبواب' : 'Sièges/Portes',
+      totalAmount: isArabic ? 'المبلغ الإجمالي المستحق:' : 'MONTANT TOTAL A PAYER:',
+      paymentMethod: isArabic ? 'طريقة الدفع' : 'Mode de Paiement',
+      status: isArabic ? 'الحالة' : 'Statut',
+      paymentTerms: isArabic ? 'شروط الدفع' : 'Délai de Paiement',
+      registrationDate: isArabic ? 'تاريخ التسجيل' : 'Date d\'Enregistrement',
+      showroomSignature: isArabic ? 'توقيع المعرض' : 'Signature Showroom',
+      supplierSignature: isArabic ? 'توقيع الموردين' : 'Signature Fournisseur',
+      stamp: isArabic ? 'الختم/الطابع' : 'Cachet / Sceau',
+      generalConditions: isArabic ? 'الشروط العامة:' : 'CONDITIONS GÉNÉRALES:',
+      conditions: isArabic ? '• يتم بيع المركبة كما رأيتها. • العيوب غير المذكورة لا تضمن. • يجب إجراء الدفع وفقا للشروط المتفق عليها. • هذه الفاتورة صالحة لمدة 30 يوما.' : '• Le véhicule est vendu en état vu. • Les défauts non signalés ne sont pas garantis. • Le paiement doit être effectué selon les modalités convenues. • Cette facture est valable 30 jours.',
+      phone: isArabic ? 'الهاتف:' : 'Tél:',
+      reference: isArabic ? 'المرجعية:' : 'Référence:',
+      partnerType: isArabic ? 'نوع الشريك' : 'Partenaire Fournisseur',
+      validatedPurchase: isArabic ? 'شراء موثق' : 'Achat Validé',
+      km: isArabic ? 'كم' : 'KM',
+      da: 'DA',
+      thankyou: isArabic ? 'شكرا لثقتك!' : 'Merci de votre confiance!',
+      invoiceGenerated: isArabic ? 'تم إنشاء الفاتورة في' : 'Facture générée le',
+      agreePayment: isArabic ? 'يتفق عليه' : 'À Convenir',
+      recorded: isArabic ? '✓ مسجل' : '✓ ENREGISTRÉ',
+      onDelivery: isArabic ? 'عند التسليم' : 'À la Livraison',
+      essence: isArabic ? 'بنزين' : 'Essence',
+      diesel: isArabic ? 'ديزل' : 'Diesel',
+      manual: isArabic ? 'يدوي' : 'Manuelle',
+      automatic: isArabic ? 'أوتوماتيكي' : 'Automatique',
+    };
+
+    const renderChecklist = (items: any) => {
+      if (!items || Object.keys(items).length === 0) return '';
+      return Object.entries(items).map(([key, value]) => `
+        <div class="check-item ${value ? 'checked' : 'unchecked'}">
+          <span class="icon">${value ? '✓' : '✕'}</span>
+          <span class="text">${key}</span>
+        </div>
+      `).join('');
+    };
+    
+    const logoSrc = showroom?.logo_url || showroom?.logo_data;
+    
     const printContent = `
       <!DOCTYPE html>
-      <html>
+      <html dir="${direction}">
       <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Facture d'Achat - ${purchase.id?.slice(0, 8)}</title>
+        <title>${labels.invoiceTitle} - ${purchase.id?.slice(0, 8)}</title>
         <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          html, body { font-family: system-ui, -apple-system, sans-serif; background: white; }
-          .invoice-container { max-width: 210mm; margin: 0 auto; padding: 12mm; background: white; }
-          .header { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 15px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; }
-          .logo { flex-shrink: 0; }
-          .logo img { height: 60px; width: 60px; object-fit: contain; }
-          .header-info { flex: 1; }
-          .header-info h1 { font-size: 24px; font-weight: bold; color: #1f2937; margin: 0; }
-          .header-info p { font-size: 11px; color: #666; margin: 3px 0 0 0; }
-          .header-right { text-align: right; }
-          .title { font-size: 9px; color: #999; font-weight: bold; text-transform: uppercase; margin: 0; letter-spacing: 0.5px; }
-          .document-id { font-size: 14px; font-weight: bold; color: #1f2937; margin: 5px 0 0 0; }
-          .section { margin-bottom: 12px; }
-          .section-title { font-size: 13px; font-weight: bold; color: #1f2937; margin-bottom: 8px; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 10px; }
-          .info-item { }
-          .info-item-label { font-size: 8px; color: #999; font-weight: bold; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px; }
-          .info-item-value { font-size: 12px; font-weight: bold; color: #1f2937; }
-          .checklist { margin-bottom: 10px; padding: 8px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px; }
-          .checklist-title { font-size: 11px; font-weight: bold; color: #d97706; margin-bottom: 6px; }
-          .checklist-items { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-          .checklist-item { display: flex; align-items: center; gap: 5px; }
-          .checklist-check { font-size: 12px; font-weight: bold; }
-          .check-yes { color: #16a34a; }
-          .check-no { color: #dc2626; }
-          .checklist-item-text { font-size: 10px; color: #1f2937; }
-          .financial { margin-bottom: 12px; padding-top: 10px; border-top: 1px solid #e5e7eb; }
-          .financial-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-          .financial-label { font-size: 11px; color: #666; }
-          .financial-value { font-size: 14px; font-weight: bold; }
-          .cost-value { color: #dc2626; }
-          .signature-section { display: flex; gap: 40px; margin-top: 20px; }
-          .signature-box { flex: 1; }
-          .signature-label { font-size: 9px; color: #999; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; }
-          .signature-line { border-top: 1px solid #1f2937; padding-top: 3px; font-size: 9px; color: #1f2937; font-weight: bold; }
-          .cachet-box { flex: 1; text-align: center; }
-          .cachet-label { font-size: 9px; color: #999; font-weight: bold; text-transform: uppercase; margin-bottom: 20px; }
-          .cachet-space { width: 80px; height: 50px; border: 2px dashed #d1d5db; border-radius: 6px; margin: 0 auto; display: flex; align-items: center; justify-content: center; color: #d1d5db; font-size: 10px; }
-          .footer { text-align: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #e5e7eb; font-size: 9px; color: #999; }
+          @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+          
+          * { margin: 0; padding: 0; box-sizing: border-box; -webkit-print-color-adjust: exact; }
+          html, body { font-family: 'Inter', sans-serif; background: #fdfdfd; color: #111827; direction: ${direction}; line-height: 1.2; font-size: 12px; }
+          .invoice-container { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 8mm; background: white; border: 1px solid #eee; zoom: 0.88; }
+          
+          /* Sidebar Style Header */
+          .premium-header { 
+            background: #111; 
+            color: white; 
+            padding: 20px 30px; 
+            border-radius: 1.5rem; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            flex-direction: ${isArabic ? 'row-reverse' : 'row'};
+            border-bottom: 4px solid #dc2626;
+          }
+          
+          .logo-box {
+            background: rgba(220, 38, 36, 0.2);
+            padding: 10px;
+            border-radius: 1.2rem;
+            border: 1px solid rgba(220, 38, 36, 0.4);
+            width: 85px;
+            height: 85px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: ${isArabic ? '0' : '20px'};
+            margin-left: ${isArabic ? '20px' : '0'};
+          }
+          .logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 0.8rem; }
+          
+          .showroom-title h1 { font-size: 24px; font-weight: 900; color: white; text-transform: uppercase; letter-spacing: -0.5px; }
+          .showroom-title p { font-size: 11px; font-weight: 700; color: #dc2626; text-transform: uppercase; letter-spacing: 2px; }
+          
+          .meta-right { text-align: ${isArabic ? 'left' : 'right'}; }
+          .meta-right .doc-label { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #6b7280; letter-spacing: 3px; margin-bottom: 1px; }
+          .meta-right .doc-id { font-size: 20px; font-weight: 950; color: white; line-height: 1; }
+          
+          /* Cards Grid */
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+          .info-card { background: #f9fafb; border: 1.2px solid #f3f4f6; border-radius: 16px; padding: 14px; border-left: 5px solid #dc2626; }
+          .info-card-header { display: flex; align-items: center; gap: 6px; font-size: 9px; font-weight: 900; color: #dc2626; text-transform: uppercase; margin-bottom: 8px; flex-direction: ${isArabic ? 'row-reverse' : 'row'}; }
+          .info-card-content strong { font-size: 14px; font-weight: 900; color: #111827; display: block; margin-bottom: 4px; }
+          .info-card-content p { font-size: 11px; font-weight: 600; color: #4b5563; line-height: 1.4; }
+          
+          /* Main Section Header */
+          .section-title { 
+            display: flex; 
+            align-items: center; 
+            gap: 10px; 
+            margin-bottom: 12px; 
+            padding: 8px 16px; 
+            background: #f3f4f6; 
+            border-radius: 10px;
+            flex-direction: ${isArabic ? 'row-reverse' : 'row'};
+          }
+          .section-title h2 { font-size: 11px; font-weight: 900; text-transform: uppercase; color: #111827; letter-spacing: 1px; }
+          .section-title .line { flex: 1; height: 1.5px; background: #e5e7eb; }
+          
+          /* Specs Table */
+          .specs-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
+          .spec-box { background: white; border: 1px solid #f3f4f6; border-bottom: 2.5px solid #f3f4f6; padding: 10px; border-radius: 12px; }
+          .spec-label { font-size: 8px; font-weight: 800; color: #9ca3af; text-transform: uppercase; margin-bottom: 3px; }
+          .spec-value { font-size: 11px; font-weight: 700; color: #111827; }
+          
+          /* Inspection Section */
+          .inspection-container { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px; }
+          .inspection-column { background: #fff; border: 1px solid #f3f4f6; border-radius: 14px; padding: 10px; }
+          .inspection-column h3 { font-size: 9px; font-weight: 900; color: #374151; text-transform: uppercase; margin-bottom: 8px; text-align: center; border-bottom: 1px solid #f3f4f6; padding-bottom: 4px; }
+          .check-item { display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 700; margin-bottom: 3px; flex-direction: ${isArabic ? 'row-reverse' : 'row'}; }
+          .check-item.checked { color: #16a34a; }
+          .check-item.unchecked { color: #94a3b8; opacity: 0.6; }
+          .check-item .icon { font-weight: 900; font-size: 10px; }
+          
+          /* Financial Summary */
+          .financial-bar { 
+            display: flex; 
+            gap: 12px; 
+            margin-bottom: 20px; 
+            flex-direction: ${isArabic ? 'row-reverse' : 'row'};
+          }
+          .total-card { 
+            flex: 1; 
+            background: #111827; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 20px; 
+            text-align: center; 
+            position: relative;
+            overflow: hidden;
+            border-bottom: 5px solid #dc2626;
+          }
+          .total-card .label { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; opacity: 0.8; }
+          .total-card .amount { font-size: 28px; font-weight: 950; letter-spacing: -1px; }
+          
+          .payment-card { flex: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: #fff; border: 1.2px solid #f3f4f6; border-radius: 20px; padding: 12px; }
+          .p-item .l { font-size: 7px; font-weight: 900; color: #9ca3af; text-transform: uppercase; }
+          .p-item .v { font-size: 11px; font-weight: 700; color: #111827; }
+          
+          /* Signatures */
+          .signature-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px; }
+          .sig-box { text-align: center; }
+          .sig-area { height: 60px; background: #fafafa; border: 1.2px dashed #e5e7eb; border-radius: 10px; margin-bottom: 6px; }
+          .sig-label { font-size: 9px; font-weight: 900; color: #4b5563; text-transform: uppercase; }
+          
+          .footer { margin-top: 20px; border-top: 1px solid #f3f4f6; padding-top: 10px; text-align: center; }
+          .footer p { font-size: 8px; font-weight: 700; color: #9ca3af; text-transform: uppercase; letter-spacing: 1px; }
+          .thank-you { margin-top: 8px; font-size: 11px; font-weight: 900; color: #dc2626; letter-spacing: 2px; }
+          
           @media print {
-            body > * { display: none !important; }
-            #invoice-print { display: block !important; }
-            .invoice-container { padding: 10mm; }
+            @page { margin: 0; }
+            body { background: white; margin: 0; padding: 0; }
+            .invoice-container { border: none; width: 100%; margin: 0; padding: 15mm; zoom: 0.88; }
+            .premium-header { background: #111 !important; color: white !important; -webkit-print-color-adjust: exact; }
+            .total-card { background: #111827 !important; color: white !important; -webkit-print-color-adjust: exact; }
           }
         </style>
       </head>
       <body>
-        <div class="invoice-container" id="invoice-print">
-          <div class="header">
-            ${showroom?.logo_data ? `
-              <div class="logo">
-                <img src="${showroom.logo_data}" alt="Logo" />
+        <div class="invoice-container">
+          <!-- Premium Header -->
+          <header class="premium-header">
+            <div style="display: flex; align-items: center; flex-direction: ${isArabic ? 'row-reverse' : 'row'};">
+              <div class="logo-box">
+                ${logoSrc 
+                  ? `<img src="${logoSrc}" alt="Logo" />` 
+                  : `<div style="font-size: 32px;">🚗</div>`
+                }
               </div>
-            ` : ''}
-            <div class="header-info">
-              <h1>${showroom?.name || 'SHOWROOM'}</h1>
-              <p>${showroom?.slogan || ''}</p>
-            </div>
-            <div class="header-right">
-              <p class="title">FACTURE D'ACHAT</p>
-              <p class="document-id">#${purchase.id?.slice(0, 8).toUpperCase() || 'N/A'}</p>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">🚗 Informations Véhicule</div>
-            <div class="info-grid">
-              <div class="info-item">
-                <p class="info-item-label">Marque & Modèle</p>
-                <p class="info-item-value">${purchase.make} ${purchase.model}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Année</p>
-                <p class="info-item-value">${purchase.year}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Immatriculation</p>
-                <p class="info-item-value">${purchase.plate || '-'}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">VIN</p>
-                <p class="info-item-value">${purchase.vin || '-'}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Carburant</p>
-                <p class="info-item-value">${purchase.fuel || '-'}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Transmission</p>
-                <p class="info-item-value">${purchase.transmission || '-'}</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Kilométrage</p>
-                <p class="info-item-value">${purchase.mileage?.toLocaleString() || '-'} KM</p>
-              </div>
-              <div class="info-item">
-                <p class="info-item-label">Couleur</p>
-                <p class="info-item-value">${purchase.color || '-'}</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="section">
-            <div class="section-title">🤝 Fournisseur</div>
-            <p style="font-size: 14px; font-weight: bold; color: #1f2937; margin: 0;">${purchase.supplierName}</p>
-          </div>
-
-          ${(Object.keys(purchase.safety || {}).length > 0 ||
-              Object.keys(purchase.equipment || {}).length > 0 ||
-              Object.keys(purchase.comfort || {}).length > 0) ? `
-            <div class="section">
-              <div class="section-title">✓ Contrôle de Qualité</div>
-              ${Object.keys(purchase.safety || {}).length > 0 ? `
-                <div class="checklist">
-                  <div class="checklist-title">🛡️ Contrôle Sécurité</div>
-                  <div class="checklist-items">
-                    ${Object.entries(purchase.safety).map(([key, value]) => `
-                      <div class="checklist-item">
-                        <span class="checklist-check ${value ? 'check-yes' : 'check-no'}">${value ? '✓' : '✕'}</span>
-                        <span class="checklist-item-text">${key}</span>
-                      </div>
-                    `).join('')}
-                  </div>
+              <div class="showroom-title">
+                <h1>${showroom?.name || 'SHOWROOM'}</h1>
+                <p>${showroom?.slogan || 'Service Premium'}</p>
+                <div style="display: flex; gap: 12px; margin-top: 5px; font-size: 9px; font-weight: 700; color: #9ca3af; flex-direction: ${isArabic ? 'row-reverse' : 'row'};">
+                  <span>📍 ${showroom?.address || '-'}</span>
+                  <span>📞 ${showroom?.phone1 || '-'}</span>
                 </div>
-              ` : ''}
-              ${Object.keys(purchase.equipment || {}).length > 0 ? `
-                <div class="checklist" style="background: #dbeafe; border-color: #93c5fd;">
-                  <div class="checklist-title" style="color: #1e40af;">🧰 Dotation Bord</div>
-                  <div class="checklist-items">
-                    ${Object.entries(purchase.equipment).map(([key, value]) => `
-                      <div class="checklist-item">
-                        <span class="checklist-check ${value ? 'check-yes' : 'check-no'}">${value ? '✓' : '✕'}</span>
-                        <span class="checklist-item-text">${key}</span>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              ` : ''}
-              ${Object.keys(purchase.comfort || {}).length > 0 ? `
-                <div class="checklist" style="background: #f3e8ff; border-color: #e9d5ff;">
-                  <div class="checklist-title" style="color: #7e22ce;">✨ État & Ambiance</div>
-                  <div class="checklist-items">
-                    ${Object.entries(purchase.comfort).map(([key, value]) => `
-                      <div class="checklist-item">
-                        <span class="checklist-check ${value ? 'check-yes' : 'check-no'}">${value ? '✓' : '✕'}</span>
-                        <span class="checklist-item-text">${key}</span>
-                      </div>
-                    `).join('')}
-                  </div>
-                </div>
-              ` : ''}
+              </div>
             </div>
-          ` : ''}
-
-          <div class="financial">
-            <div class="section-title">💰 Coût d'Achat</div>
-            <div class="financial-row">
-              <span class="financial-label">Montant Total:</span>
-              <span class="financial-value cost-value">${purchase.totalCost?.toLocaleString() || '0'} ${t.currency}</span>
+            
+            <div class="meta-right">
+              <p class="doc-label">${labels.invoiceTitle}</p>
+              <p class="doc-id">#${purchase.id?.slice(0, 8).toUpperCase()}</p>
+              <p style="font-size: 10px; font-weight: 800; color: #dc2626; margin-top: 4px;">
+                ${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'fr-FR')}
+              </p>
             </div>
-          </div>
-
-          <div class="signature-section">
-            <div class="signature-box">
-              <div class="signature-label">Signature</div>
-              <div class="signature-line"></div>
+          </header>
+          
+          <!-- Information Grid -->
+          <div class="info-grid">
+            <div class="info-card">
+              <div class="info-card-header">
+                <span>🏢</span> ${labels.showroomInfo}
+              </div>
+              <div class="info-card-content">
+                <strong>${showroom?.name || 'SHOWROOM'}</strong>
+                <p>${showroom?.address || '-'}</p>
+                <p>${labels.phone} ${showroom?.phone1 || 'N/A'}</p>
+                <p>${showroom?.phone2 ? 'Tél 2: ' + showroom.phone2 : ''}</p>
+              </div>
             </div>
-            <div class="cachet-box">
-              <div class="cachet-label">Cachet/Sceau</div>
-              <div class="cachet-space">Cachet</div>
+            
+            <div class="info-card">
+              <div class="info-card-header">
+                <span>👤</span> ${labels.supplierInfo}
+              </div>
+              <div class="info-card-content">
+                <strong>${purchase.supplierName || purchase.clientName || 'N/A'}</strong>
+                <p>${labels.partnerType}</p>
+                <p>${labels.reference} ${purchase.id?.slice(0, 12) || ''}</p>
+                <p style="color: #16a34a; font-weight: 900;">${labels.validatedPurchase}</p>
+              </div>
             </div>
           </div>
-
+          
+          <!-- Vehicle Section -->
+          <div class="section-title">
+            <span>🏎️</span>
+            <h2>${labels.vehicleDetails}</h2>
+            <div class="line"></div>
+          </div>
+          
+          <div class="specs-grid">
+            <div class="spec-box"><p class="spec-label">${labels.make}</p><p class="spec-value">${purchase.make} ${purchase.model}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.year}</p><p class="spec-value">${purchase.year}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.color}</p><p class="spec-value">${purchase.color || '-'}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.vin}</p><p class="spec-value">${purchase.vin || '-'}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.plate}</p><p class="spec-value">${purchase.plate || '-'}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.mileage}</p><p class="spec-value">${purchase.mileage?.toLocaleString() || '-'} ${labels.km}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.fuel}</p><p class="spec-value">${purchase.fuel === 'essence' ? labels.essence : labels.diesel}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.transmission}</p><p class="spec-value">${purchase.transmission === 'manuelle' ? labels.manual : labels.automatic}</p></div>
+            <div class="spec-box"><p class="spec-label">${labels.seatsAndDoors}</p><p class="spec-value">${purchase.seats} Sièges / ${purchase.doors} Portes</p></div>
+          </div>
+          
+          <!-- Inspection Report Section -->
+          <div class="section-title">
+            <span>📋</span>
+            <h2>${labels.inspectionTitle}</h2>
+            <div class="line"></div>
+          </div>
+          
+          <div class="inspection-container">
+            <div class="inspection-column">
+              <h3>🛡️ ${labels.safetySection}</h3>
+              ${renderChecklist(purchase.safety)}
+            </div>
+            <div class="inspection-column">
+              <h3>🧰 ${labels.equipmentSection}</h3>
+              ${renderChecklist(purchase.equipment)}
+            </div>
+            <div class="inspection-column">
+              <h3>✨ ${labels.comfortSection}</h3>
+              ${renderChecklist(purchase.comfort)}
+            </div>
+          </div>
+          
+          <!-- Financial Summary -->
+          <div class="financial-bar">
+            <div class="total-card">
+              <p class="label">${labels.totalAmount}</p>
+              <p class="amount">${purchase.totalCost?.toLocaleString() || '0'} ${labels.da}</p>
+            </div>
+            
+            <div class="payment-card">
+              <div class="p-item"><p class="l">${labels.paymentMethod}</p><p class="v">${labels.agreePayment}</p></div>
+              <div class="p-item"><p class="l">${labels.status}</p><p class="v" style="color: #16a34a;">${labels.recorded}</p></div>
+              <div class="p-item"><p class="l">${labels.paymentTerms}</p><p class="v">${labels.onDelivery}</p></div>
+              <div class="p-item"><p class="l">${labels.registrationDate}</p><p class="v">${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'fr-FR')}</p></div>
+            </div>
+          </div>
+          
+          <!-- Signatures -->
+          <div class="signature-row">
+            <div class="sig-box">
+              <div class="sig-area"></div>
+              <p class="sig-label">${labels.showroomSignature}</p>
+            </div>
+            <div class="sig-box">
+              <div class="sig-area"></div>
+              <p class="sig-label">${labels.supplierSignature}</p>
+            </div>
+            <div class="sig-box">
+              <div class="sig-area"></div>
+              <p class="sig-label">${labels.stamp}</p>
+            </div>
+          </div>
+          
+          
+          <!-- Footer -->
           <div class="footer">
-            <p>Facture générée le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}</p>
-            <p>${showroom?.address || ''}</p>
+            <p>${labels.invoiceGenerated} ${new Date().toLocaleDateString(isArabic ? 'ar-SA' : 'fr-FR')} | ${showroom?.name}</p>
+            <p class="thank-you">${labels.thankyou}</p>
           </div>
         </div>
 
         <script>
-          setTimeout(() => {
-            window.print();
-            window.close();
-          }, 100);
+          window.addEventListener('load', () => {
+            setTimeout(() => {
+              window.print();
+            }, 500);
+          });
         </script>
       </body>
       </html>
     `;
-
-    const printWindow = window.open('', '', 'width=800,height=600');
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      onClose();
-    }
+    return printContent;
   };
 
-  const handlePersonalize = () => {
-    setIsPersonalizing(true);
+  const handleLanguageSelect = (selectedLang: 'fr' | 'ar') => {
+    setSelectedLanguage(selectedLang);
+    const html = generateInvoiceHTML(selectedLang);
+    setPrintPreview(html);
+  };
+
+  const handlePrintFromPreview = () => {
+    if (printPreview) {
+      const printWindow = window.open('', '', 'width=900,height=1200');
+      if (printWindow) {
+        printWindow.document.write(printPreview);
+        printWindow.document.close();
+      }
+    }
   };
 
   const handleEditorPrint = (elements: any) => {
@@ -1394,66 +1992,145 @@ const PrintInvoiceModal: React.FC<PrintInvoiceModalProps> = ({ purchase, lang, o
     setTimeout(() => onClose(), 1000);
   };
 
-  if (isPersonalizing && showroom) {
+  // Language selection view
+  if (!selectedLanguage && !printPreview) {
     return (
-      <InvoiceEditor
-        purchase={purchase}
-        lang={lang}
-        showroom={showroom}
-        onPrint={handleEditorPrint}
-        onCancel={() => setIsPersonalizing(false)}
-      />
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-[150] flex items-center justify-center p-4 animate-in fade-in duration-500">
+        <div className="glass-card rounded-[3.5rem] shadow-[0_0_100px_rgba(220,38,38,0.3)] max-w-2xl w-full overflow-hidden flex flex-col border border-red-600/50 transform animate-in zoom-in-95 duration-500">
+          <div className="p-10 md:p-14 bg-gradient-to-br from-red-950 via-slate-900 to-black relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-red-600 rounded-full blur-[120px] opacity-10 pointer-events-none"></div>
+            <div className="relative z-10 text-center">
+              <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 via-red-400 to-red-600 mb-4 tracking-tight">
+                🌐 Sélection Langue
+              </h2>
+              <p className="text-red-400/80 font-black text-sm uppercase tracking-[0.2em]">Choisissez la langue d'impression</p>
+            </div>
+          </div>
+
+          <div className="p-10 md:p-14 space-y-6 flex-1 bg-black/40">
+            <button
+              onClick={() => handleLanguageSelect('fr')}
+              className="group relative w-full p-1 rounded-[2rem] overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 opacity-20 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10 flex items-center gap-6 bg-slate-900/90 group-hover:bg-transparent p-6 rounded-[1.9rem] transition-colors border border-red-600/20 group-hover:border-transparent">
+                <span className="text-5xl transition-transform duration-500 group-hover:scale-125 group-hover:rotate-12">🇫🇷</span>
+                <div className="text-left">
+                  <p className="font-black text-red-100 text-2xl tracking-tight mb-1">Français</p>
+                  <p className="text-xs font-black text-red-400/60 uppercase tracking-widest">Imprimer maintenant</p>
+                </div>
+                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                  <span className="text-2xl text-white">🖨️</span>
+                </div>
+              </div>
+            </button>
+
+            <button
+              onClick={() => handleLanguageSelect('ar')}
+              className="group relative w-full p-1 rounded-[2rem] overflow-hidden transition-all duration-300 hover:scale-[1.02] active:scale-95"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 opacity-20 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10 flex items-center gap-6 bg-slate-900/90 group-hover:bg-transparent p-6 rounded-[1.9rem] transition-colors border border-red-600/20 group-hover:border-transparent">
+                <span className="text-5xl transition-transform duration-500 group-hover:scale-125 group-hover:rotate-12">🇸🇦</span>
+                <div className="text-left">
+                  <p className="font-black text-red-100 text-2xl tracking-tight mb-1">العربية</p>
+                  <p className="text-xs font-black text-red-400/60 uppercase tracking-widest">اطبع الآن</p>
+                </div>
+                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
+                  <span className="text-2xl text-white">🖨️</span>
+                </div>
+              </div>
+            </button>
+          </div>
+
+          <div className="p-10 bg-slate-950/80 border-t border-red-600/30 flex justify-center">
+            <button
+              onClick={onClose}
+              className="px-10 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.3em] text-red-400 hover:text-white hover:bg-red-600/20 transition-all border border-red-600/30"
+            >
+              ✕ Annuler & Fermer
+            </button>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col">
-        {/* Preview */}
-        <div className="flex-1 overflow-y-auto p-8 bg-white">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Aperçu de la Facture</h2>
-            <p className="text-sm text-slate-500">Vérifiez les détails avant d'imprimer</p>
-          </div>
-          
-          {showroom && (
-            <div className="bg-slate-50 rounded-xl p-6 border border-slate-200">
-              <div className="flex items-center gap-4 mb-4">
-                {showroom?.logo_data && (
-                  <img src={showroom.logo_data} alt="Logo" className="h-16 w-16 object-contain" />
-                )}
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">{showroom?.name}</h3>
-                  <p className="text-sm text-slate-600">{showroom?.slogan}</p>
-                </div>
+  // Invoice preview in modal
+  if (selectedLanguage && printPreview) {
+    return (
+      <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[150] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-500">
+        <div className="glass-card rounded-[3.5rem] shadow-[0_0_100px_rgba(220,38,38,0.2)] max-w-6xl w-full h-full max-h-[90vh] overflow-hidden flex flex-col border border-red-600/40 transform animate-in zoom-in-95 duration-500">
+          <div className="p-8 md:p-10 bg-gradient-to-r from-red-950 via-slate-900 to-black flex justify-between items-center relative overflow-hidden shrink-0">
+            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+            <div className="relative z-10">
+              <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 via-red-400 to-red-600 tracking-tight">
+                📄 Aperçu Impression
+              </h2>
+              <div className="flex items-center gap-3 mt-2">
+                <span className="px-3 py-1 bg-red-600/20 border border-red-600/30 rounded-lg text-[10px] font-black text-red-400 uppercase tracking-widest">
+                  {selectedLanguage === 'fr' ? '🇫🇷 Français' : '🇸🇦 العربية'}
+                </span>
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                <span className="text-[10px] font-black text-red-400/50 uppercase tracking-widest">Document prêt à imprimer</span>
               </div>
-              <p className="text-xs text-slate-500 font-semibold uppercase">FACTURE D'ACHAT #{purchase.id?.slice(0, 8)}</p>
             </div>
-          )}
-        </div>
+            
+            <button
+              onClick={() => {
+                setSelectedLanguage(null);
+                setPrintPreview('');
+              }}
+              className="group relative h-14 w-14 rounded-full overflow-hidden transition-all duration-300 hover:rotate-90"
+            >
+              <div className="absolute inset-0 bg-red-600 group-hover:bg-red-500 transition-colors"></div>
+              <span className="relative z-10 text-white text-xl font-black">✕</span>
+            </button>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="p-8 bg-slate-50 border-t border-slate-200 flex gap-4 justify-end">
-          <button
-            onClick={onClose}
-            className="px-8 py-4 rounded-lg bg-slate-200 text-slate-900 font-bold text-sm uppercase tracking-wider hover:bg-slate-300 transition"
-          >
-            ✕ Annuler
-          </button>
-          <button
-            onClick={handlePersonalize}
-            className="px-8 py-4 rounded-lg bg-blue-500 text-white font-bold text-sm uppercase tracking-wider hover:bg-blue-600 transition"
-          >
-            ✏️ Personnaliser
-          </button>
-          <button
-            onClick={handlePrintNow}
-            className="px-8 py-4 rounded-lg bg-green-500 text-white font-bold text-sm uppercase tracking-wider hover:bg-green-600 transition shadow-lg"
-          >
-            ✓ Imprimer Maintenant
-          </button>
+          <div className="flex-1 overflow-y-auto p-4 md:p-12 bg-slate-950/50 custom-scrollbar">
+            <div className="bg-white rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-0 md:p-4 mx-auto max-w-[210mm] transform transition-transform hover:scale-[1.01] duration-500">
+              <div className="rounded-[1.5rem] overflow-hidden border border-slate-100 shadow-inner" dangerouslySetInnerHTML={{ __html: printPreview }} />
+            </div>
+          </div>
+
+          <div className="p-8 md:p-10 bg-slate-900/90 border-t border-red-600/30 flex gap-6 justify-between items-center shrink-0">
+            <button
+              onClick={() => {
+                setSelectedLanguage(null);
+                setPrintPreview('');
+              }}
+              className="px-8 py-4 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] text-red-400 hover:text-white transition-all flex items-center gap-3"
+            >
+              ← Retour au choix
+            </button>
+
+            <button
+              onClick={handlePrintFromPreview}
+              className="group relative px-12 py-5 rounded-2xl overflow-hidden font-black uppercase tracking-[0.2em] text-[12px] transition-all duration-300 shadow-2xl shadow-red-600/20"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+              <div className="relative z-10 flex items-center justify-center gap-4 text-white">
+                <span className="text-xl group-hover:animate-bounce">🖨️</span>
+                <span>Lancer l'Impression</span>
+              </div>
+            </button>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  // Default: Loading state
+  return (
+    <div className="fixed inset-0 bg-black/90 backdrop-blur-2xl z-[150] flex items-center justify-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="h-20 w-20 border-[6px] border-red-600/20 border-t-red-600 rounded-full animate-spin"></div>
+        <p className="text-red-400 font-black text-[10px] uppercase tracking-[0.4em] animate-pulse">Initialisation...</p>
       </div>
     </div>
   );
-  };
+};
+
+

@@ -138,6 +138,12 @@ export interface PurchaseRecord {
   photo_urls: string[];
   totalCost: number;
   sellingPrice: number;
+  initialClientPrice?: number;
+  clientId?: string;
+  clientName?: string;
+  clientPhone?: string;
+  carNotes?: string;
+  carInfo?: string;
   dateAdded: string;
   purchaseDateTime?: string;
   created_at?: string;
@@ -180,6 +186,7 @@ export interface Worker {
   password?: string;
   created_at?: string;
   created_by?: string;
+  permissions?: string;
 }
 
 export interface Expense {
@@ -187,6 +194,7 @@ export interface Expense {
   name: string;
   cost: number;
   date: string;
+  note?: string;
   created_by?: string;
 }
 
@@ -217,6 +225,32 @@ export interface Maintenance {
   created_by?: string;
 }
 
+export interface Client {
+  id: string;
+  first_name: string;
+  last_name: string;
+  dob?: string;
+  gender?: string;
+  pob?: string;
+  address?: string;
+  profession?: string;
+  mobile1: string;
+  mobile2?: string;
+  nif?: string;
+  rc?: string;
+  nis?: string;
+  art?: string;
+  doc_type?: string;
+  doc_number?: string;
+  issue_date?: string;
+  expiry_date?: string;
+  photo_url?: string;
+  scan_url?: string;
+  signature_url?: string;
+  created_at?: string;
+  created_by?: string;
+}
+
 export interface BillingRecord {
   id: string;
   type: 'sale' | 'purchase' | 'checkin' | 'checkout';
@@ -235,6 +269,8 @@ export interface ShowroomConfig {
   facebook: string;
   instagram: string;
   whatsapp: string;
+  phone1?: string;
+  phone2?: string;
   logo_url?: string;
   updated_at?: string;
 }

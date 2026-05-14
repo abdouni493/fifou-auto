@@ -171,10 +171,10 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
   if (loading) return (
     <div className="flex flex-col items-center justify-center py-40 animate-in fade-in">
       <div className="relative h-24 w-24">
-         <div className="absolute inset-0 border-4 border-slate-100 border-t-blue-600 rounded-full animate-spin"></div>
+         <div className="absolute inset-0 border-4 border-red-600/20 border-t-blue-600 rounded-full animate-spin"></div>
          <div className="absolute inset-0 flex items-center justify-center text-2xl">🏎️</div>
       </div>
-      <p className="font-black text-slate-400 uppercase tracking-[0.4em] text-[10px] mt-8 text-center leading-relaxed">Initialisation...</p>
+      <p className="font-black text-red-400/70 uppercase tracking-[0.4em] text-[10px] mt-8 text-center leading-relaxed">Initialisation...</p>
     </div>
   );
 
@@ -183,8 +183,8 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-end gap-6 border-b border-slate-50 pb-8">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight leading-none">Contrôle Technique</h2>
-          <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
+          <h2 className="text-4xl font-black text-red-100 tracking-tight leading-none">Contrôle Technique</h2>
+          <p className="text-red-400/70 font-bold text-xs uppercase tracking-[0.3em] mt-3 flex items-center gap-2">
             <span className="h-2 w-2 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50"></span>
             Surveillance Active
           </p>
@@ -192,7 +192,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => setShowCreatedDate(!showCreatedDate)}
-            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${showCreatedDate ? 'bg-blue-600 text-white shadow-lg' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+            className={`px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${showCreatedDate ? 'bg-blue-600 text-white shadow-lg' : 'bg-red-950/30 text-red-400/70 hover:bg-slate-200'}`}
           >
             📅 {showCreatedDate ? 'Masquer' : 'Afficher'} Date Création
           </button>
@@ -221,18 +221,18 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
 
       {/* PRINT STUDIO MODAL */}
       {printingRecord && (
-        <div className="fixed inset-0 z-[150] bg-slate-100 flex overflow-hidden animate-in fade-in">
+        <div className="fixed inset-0 z-[150] bg-red-950/30 flex overflow-hidden animate-in fade-in">
           {/* Studio Sidebar (Inspector) */}
-          <div className="w-[400px] bg-white border-r border-slate-200 flex flex-col shadow-xl z-20">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+          <div className="w-[400px] bg-white border-r border-red-600/30 flex flex-col shadow-xl z-20">
+            <div className="p-8 border-b border-red-600/20 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-2xl bg-slate-900 text-white flex items-center justify-center text-2xl shadow-lg">🖨️</div>
                 <div>
-                   <h3 className="font-black text-slate-900 tracking-tight">Studio Print</h3>
-                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Édition en direct</p>
+                   <h3 className="font-black text-red-100 tracking-tight">Studio Print</h3>
+                   <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Édition en direct</p>
                 </div>
               </div>
-              <button onClick={() => setPrintingRecord(null)} className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center text-xl hover:bg-red-50">✕</button>
+              <button onClick={() => setPrintingRecord(null)} className="h-10 w-10 rounded-full bg-slate-50 flex items-center justify-center text-xl hover:bg-red-600/20">✕</button>
             </div>
 
             <div className="flex-grow overflow-y-auto p-8 space-y-10 custom-scrollbar">
@@ -285,7 +285,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
               )}
             </div>
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100 flex flex-col gap-4">
+            <div className="p-8 bg-slate-50 border-t border-red-600/20 flex flex-col gap-4">
               <button 
                 onClick={() => window.print()} 
                 className="w-full custom-gradient-btn py-5 rounded-2xl text-white font-black uppercase text-xs tracking-[0.2em] shadow-xl hover:scale-105 transition-all"
@@ -296,7 +296,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
           </div>
 
           {/* Canvas Area */}
-          <div className="flex-grow overflow-y-auto p-12 md:p-20 flex justify-center custom-scrollbar bg-slate-200/50">
+          <div className="flex-grow overflow-y-auto p-12 md:p-20 flex justify-center custom-scrollbar bg-red-600/10">
              <div className="bg-white shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] w-full max-w-[850px] min-h-[1130px] p-20 flex flex-col transition-all duration-500 origin-top h-fit mb-40 overflow-hidden print:shadow-none print:m-0 print:p-10 print:max-w-none print:min-h-0">
                 
                 {/* Header (Editable & Draggable) */}
@@ -315,7 +315,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                      className={`w-full text-center mt-10 cursor-pointer transition-all ${activePrintField === 'title' ? 'ring-4 ring-blue-500 ring-offset-4' : 'hover:bg-slate-50'}`}
                    >
                       <h1 style={{ color: printDesign.primaryColor, fontSize: `${printDesign.fontSizeBase + 12}px` }} className="font-black tracking-tighter leading-none mb-2 uppercase">{printDesign.labels.title}</h1>
-                      <p className="text-slate-400 font-bold tracking-[0.4em] uppercase text-[10px]">AutoLux Premium Showroom - Services Experts</p>
+                      <p className="text-red-400/70 font-bold tracking-[0.4em] uppercase text-[10px]">AutoLux Premium Showroom - Services Experts</p>
                    </div>
                 </div>
 
@@ -326,22 +326,22 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                 >
                    <div className="space-y-6">
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{printDesign.labels.ref}</p>
-                         <p className="font-black text-xl text-slate-900">#INSP-{printingRecord.id.slice(0, 8).toUpperCase()}</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{printDesign.labels.ref}</p>
+                         <p className="font-black text-xl text-red-100">#INSP-{printingRecord.id.slice(0, 8).toUpperCase()}</p>
                       </div>
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{printDesign.labels.partnerLabel}</p>
-                         <p className="font-black text-lg text-slate-800">{printingRecord.partnerName}</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{printDesign.labels.partnerLabel}</p>
+                         <p className="font-black text-lg text-red-100">{printingRecord.partnerName}</p>
                       </div>
                    </div>
                    <div className="text-right space-y-6">
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{printDesign.labels.date}</p>
-                         <p className="font-black text-xl text-slate-900">{printingRecord.date}</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{printDesign.labels.date}</p>
+                         <p className="font-black text-xl text-red-100">{printingRecord.date}</p>
                       </div>
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{printDesign.labels.carLabel}</p>
-                         <p className="font-black text-lg text-slate-800 uppercase tracking-tighter">{printingRecord.carName}</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{printDesign.labels.carLabel}</p>
+                         <p className="font-black text-lg text-red-100 uppercase tracking-tighter">{printingRecord.carName}</p>
                       </div>
                    </div>
                 </div>
@@ -390,9 +390,9 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                    </div>
 
                    {/* Notes */}
-                   <div className="pt-10 border-t border-slate-100">
+                   <div className="pt-10 border-t border-red-600/20">
                       <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest mb-4">Observations Techniques</p>
-                      <p className="text-sm font-bold text-slate-600 leading-relaxed italic">
+                      <p className="text-sm font-bold text-red-400/70 leading-relaxed italic">
                         {printingRecord.note || "Aucune observation particulière n'a été signalée pour ce dossier."}
                       </p>
                    </div>
@@ -402,15 +402,15 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                 <div className="mt-20 flex justify-between items-end border-t-2 pt-12" style={{ borderColor: printDesign.primaryColor }}>
                    <div className="space-y-12">
                       <div className="space-y-1">
-                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{printDesign.labels.total}</p>
-                         <p className="text-4xl font-black text-slate-900 tracking-tighter">{printingRecord.mileage.toLocaleString()} KM</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{printDesign.labels.total}</p>
+                         <p className="text-4xl font-black text-red-100 tracking-tighter">{printingRecord.mileage.toLocaleString()} KM</p>
                       </div>
-                      <div className="w-64 border-2 border-slate-100 border-dashed rounded-[3rem] p-8 text-center opacity-30">
+                      <div className="w-64 border-2 border-red-600/20 border-dashed rounded-[3rem] p-8 text-center opacity-30">
                          <p className="text-[8px] font-black uppercase tracking-widest mb-10">Signature du Client</p>
                       </div>
                    </div>
                    <div className="flex flex-col items-center gap-8">
-                      <div className="w-64 h-32 border-2 border-slate-100 border-dashed rounded-[3rem] p-8 flex flex-col items-center justify-center relative">
+                      <div className="w-64 h-32 border-2 border-red-600/20 border-dashed rounded-[3rem] p-8 flex flex-col items-center justify-center relative">
                          <span className="text-[8px] font-black uppercase tracking-widest absolute top-4 opacity-20">Cachet du Showroom</span>
                          <span className="text-3xl opacity-10 grayscale">🏎️ AUTOLUX</span>
                       </div>
@@ -425,11 +425,11 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
       {viewingRecord && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-2xl animate-in fade-in" onClick={() => setViewingRecord(null)}></div>
-          <div className="relative bg-white w-full max-w-4xl p-14 rounded-[4.5rem] shadow-2xl animate-in zoom-in-95 border border-white/20">
+          <div className="relative glass-card w-full max-w-4xl p-14 rounded-[4.5rem] shadow-2xl animate-in zoom-in-95 border border-red-600/20">
              <div className="flex justify-between items-center mb-10">
                 <div>
-                   <h3 className="text-4xl font-black tracking-tighter text-slate-900">{viewingRecord.carName}</h3>
-                   <p className="text-blue-500 font-bold text-xs uppercase tracking-widest mt-2 italic">Dossier Certifié AutoLux</p>
+                   <h3 className="text-4xl font-black tracking-tighter text-red-100">{viewingRecord.carName}</h3>
+                   <p className="text-red-600 font-bold text-xs uppercase tracking-widest mt-2 italic">Dossier Certifié AutoLux</p>
                 </div>
                 <button onClick={() => setViewingRecord(null)} className="h-14 w-14 bg-slate-50 rounded-full flex items-center justify-center text-2xl active:scale-90 transition-all">✕</button>
              </div>
@@ -442,7 +442,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
              </div>
 
              <div className="space-y-8">
-                <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400 border-b border-slate-50 pb-4">Captures Médias</h4>
+                <h4 className="text-[11px] font-black uppercase tracking-[0.3em] text-red-400/70 border-b border-slate-50 pb-4">Captures Médias</h4>
                 <div className="grid grid-cols-4 md:grid-cols-6 gap-4">
                    {[...(viewingRecord.exterior_photo_urls || []), ...(viewingRecord.interior_photo_urls || [])].map((p, i) => (
                      <div key={i} className="aspect-square rounded-[2rem] overflow-hidden border-2 border-slate-50 shadow-sm">
@@ -459,21 +459,21 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
       {isWizardOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-2xl animate-in fade-in" onClick={() => !isSaving && setIsWizardOpen(false)}></div>
-          <div className="relative bg-white w-full max-w-[1300px] h-full max-h-[92vh] overflow-hidden rounded-[4.5rem] shadow-2xl flex flex-col animate-in zoom-in-95 border border-white/40">
+          <div className="relative bg-white w-full max-w-[1300px] h-full max-h-[92vh] overflow-hidden rounded-[4.5rem] shadow-2xl flex flex-col animate-in zoom-in-95 border border-red-600/30/40">
             {/* Nav Wizard Header */}
-            <div className="px-14 py-8 bg-slate-50/50 border-b border-slate-100 flex justify-between items-center shrink-0">
+            <div className="px-14 py-8 bg-slate-50/50 border-b border-red-600/20 flex justify-between items-center shrink-0">
                <div className="flex items-center gap-8">
                   <div className="h-16 w-16 rounded-[2rem] bg-slate-900 text-white flex items-center justify-center text-3xl shadow-xl">⚙️</div>
                   <div>
-                    <h3 className="text-2xl font-black text-slate-900 tracking-tighter">Diagnostic Haute Précision</h3>
+                    <h3 className="text-2xl font-black text-red-100 tracking-tighter">Diagnostic Haute Précision</h3>
                     <div className="flex items-center gap-3 mt-2">
                        <span className={`h-1.5 w-16 rounded-full ${wizardStep >= 1 ? 'bg-blue-600' : 'bg-slate-200'} transition-all duration-500`}></span>
                        <span className={`h-1.5 w-16 rounded-full ${wizardStep >= 2 ? 'bg-blue-600' : 'bg-slate-200'} transition-all duration-500`}></span>
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Phase {wizardStep} / 2</span>
+                       <span className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-2">Phase {wizardStep} / 2</span>
                     </div>
                   </div>
                </div>
-               <button onClick={() => !isSaving && setIsWizardOpen(false)} className="h-12 w-12 bg-white rounded-full flex items-center justify-center text-xl hover:bg-red-50 text-slate-400 border border-slate-100 shadow-sm transition-all active:scale-90">✕</button>
+               <button onClick={() => !isSaving && setIsWizardOpen(false)} className="h-12 w-12 glass-card rounded-full flex items-center justify-center text-xl hover:bg-red-600/20 text-red-400/70 border border-red-600/20 shadow-sm transition-all active:scale-90">✕</button>
             </div>
             <div className="flex-grow overflow-y-auto p-12 custom-scrollbar bg-white">
               {/* Simplified Step Implementation for speed */}
@@ -482,26 +482,26 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-stretch">
                       <div className="lg:col-span-4 space-y-10">
                          <div className="space-y-4">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">Mouvement</label>
-                            <div className="flex p-2 bg-slate-100 rounded-[2.5rem] border border-slate-200 shadow-inner">
-                               <button onClick={() => setFormData({...formData, type: 'checkin'})} className={`flex-1 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all duration-300 ${formData.type === 'checkin' ? 'bg-white text-blue-600 shadow-xl' : 'text-slate-400'}`}>Entrée</button>
-                               <button onClick={() => setFormData({...formData, type: 'checkout'})} className={`flex-1 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all duration-300 ${formData.type === 'checkout' ? 'bg-white text-purple-600 shadow-xl' : 'text-slate-400'}`}>Sortie</button>
+                            <label className="text-[11px] font-black text-red-400/70 uppercase tracking-[0.2em] ml-4">Mouvement</label>
+                            <div className="flex p-2 bg-red-950/30 rounded-[2.5rem] border border-red-600/30 shadow-inner">
+                               <button onClick={() => setFormData({...formData, type: 'checkin'})} className={`flex-1 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all duration-300 ${formData.type === 'checkin' ? 'bg-white text-red-400 shadow-xl' : 'text-red-400/70'}`}>Entrée</button>
+                               <button onClick={() => setFormData({...formData, type: 'checkout'})} className={`flex-1 py-5 rounded-[2rem] font-black text-[11px] uppercase tracking-widest transition-all duration-300 ${formData.type === 'checkout' ? 'bg-white text-purple-600 shadow-xl' : 'text-red-400/70'}`}>Sortie</button>
                             </div>
                          </div>
                          <div className="space-y-4 relative">
-                            <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] ml-4">Unité Showroom</label>
+                            <label className="text-[11px] font-black text-red-400/70 uppercase tracking-[0.2em] ml-4">Unité Showroom</label>
                             <div className="relative group">
                                <span className="absolute left-7 top-1/2 -translate-y-1/2 text-3xl opacity-20 transition-all">🔍</span>
-                               <input type="text" value={formData.carName ? formData.carName : searchQuery} onChange={(e) => { if(formData.carName) setFormData({...formData, carName: '', carId: ''}); setSearchQuery(e.target.value); }} className="w-full bg-slate-50 border-2 border-slate-100 px-18 py-6 rounded-[2.5rem] outline-none focus:border-blue-500 font-black text-xl shadow-inner transition-all" placeholder="Rechercher..." />
+                               <input type="text" value={formData.carName ? formData.carName : searchQuery} onChange={(e) => { if(formData.carName) setFormData({...formData, carName: '', carId: ''}); setSearchQuery(e.target.value); }} className="w-full bg-slate-50 border-2 border-red-600/20 px-18 py-6 rounded-[2.5rem] outline-none focus:border-red-600 font-black text-xl shadow-inner transition-all" placeholder="Rechercher..." />
                                {filteredInventory.length > 0 && (
-                                 <div className="absolute top-full left-0 right-0 mt-4 bg-white border border-slate-100 rounded-[3rem] shadow-2xl z-[150] overflow-hidden">
+                                 <div className="absolute top-full left-0 right-0 mt-4 glass-card border border-red-600/30 rounded-[3rem] shadow-2xl z-[150] overflow-hidden">
                                    {filteredInventory.map(car => (
                                      <button key={car.id} onClick={() => handleSelectCar(car)} className="w-full p-8 text-left hover:bg-blue-50 flex items-center justify-between border-b border-slate-50 last:border-0 transition-all group/item">
                                        <div>
-                                         <p className="font-black text-slate-900 text-lg group-hover/item:text-blue-600">{car.make} {car.model}</p>
-                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{car.vin}</p>
+                                         <p className="font-black text-red-100 text-lg group-hover/item:text-red-400">{car.make} {car.model}</p>
+                                         <p className="text-[10px] font-bold text-red-400/70 uppercase tracking-widest mt-1">{car.vin}</p>
                                        </div>
-                                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 opacity-0 group-hover/item:opacity-100 transition-all">→</div>
+                                       <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-red-400 opacity-0 group-hover/item:opacity-100 transition-all">→</div>
                                      </button>
                                    ))}
                                  </div>
@@ -511,28 +511,28 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                       </div>
                       <div className="lg:col-span-8">
                          {formData.carId ? (
-                           <div className="h-full bg-slate-900 rounded-[4rem] p-12 text-white relative overflow-hidden flex flex-col justify-between shadow-2xl border border-white/10 animate-in zoom-in-95 duration-700">
+                           <div className="h-full bg-slate-900 rounded-[4rem] p-12 text-white relative overflow-hidden flex flex-col justify-between shadow-2xl border border-red-600/30/10 animate-in zoom-in-95 duration-700">
                               <div className="relative z-10 flex justify-between items-start">
                                  <div>
                                     <span className="px-4 py-1.5 bg-blue-600 rounded-full text-[9px] font-black uppercase tracking-widest mb-4 inline-block">Unité Active</span>
                                     <h4 className="text-5xl font-black tracking-tighter leading-none">{formData.carName}</h4>
-                                    <p className="text-slate-400 font-mono tracking-[0.3em] text-sm opacity-60 mt-4">{formData.vin}</p>
+                                    <p className="text-red-400/70 font-mono tracking-[0.3em] text-sm opacity-60 mt-4">{formData.vin}</p>
                                  </div>
                                  <div className="text-right">
                                     <p className="text-2xl font-black text-blue-400">{formData.partnerName}</p>
                                  </div>
                               </div>
-                              <div className="relative z-10 flex items-end gap-12 mt-12 bg-white/5 p-8 rounded-[3rem] border border-white/5 backdrop-blur-md">
+                              <div className="relative z-10 flex items-end gap-12 mt-12 bg-white/5 p-8 rounded-[3rem] border border-red-600/30/5 backdrop-blur-md">
                                  <div className="flex-1">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block ml-3">Relevé KM</label>
-                                    <div className="relative"><input type="number" value={formData.mileage} onChange={(e) => setFormData({...formData, mileage: Number(e.target.value)})} className="bg-transparent border-b-2 border-blue-500/50 text-5xl font-black text-white outline-none w-full py-2 focus:border-blue-400 transition-all" /></div>
+                                    <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-4 block ml-3">Relevé KM</label>
+                                    <div className="relative"><input type="number" value={formData.mileage} onChange={(e) => setFormData({...formData, mileage: Number(e.target.value)})} className="bg-transparent border-b-2 border-red-600/50 text-5xl font-black text-white outline-none w-full py-2 focus:border-blue-400 transition-all" /></div>
                                  </div>
                               </div>
                            </div>
-                         ) : <div className="h-full border-4 border-dashed border-slate-100 rounded-[4rem] flex flex-col items-center justify-center text-slate-300 bg-slate-50/20">...</div>}
+                         ) : <div className="h-full border-4 border-dashed border-red-600/20 rounded-[4rem] flex flex-col items-center justify-center text-slate-300 bg-slate-50/20">...</div>}
                       </div>
                    </div>
-                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-14 border-t border-slate-100">
+                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 pt-14 border-t border-red-600/20">
                       <DiagnosticSection title="Contrôle Sécurité" icon="🛡️">
                          {Object.entries(formData.safety || {}).map(([k, v]) => <DiagnosticTile key={k} label={(t.inspection.safetyItems as any)[k] || k} active={v as boolean} onToggle={() => handleToggle('safety', k)} />)}
                       </DiagnosticSection>
@@ -542,7 +542,7 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                       <DiagnosticSection title="État & Ambiance" icon="✨">
                          <DiagnosticTile label="Climatisation OK" active={formData.comfort?.ac as boolean} onToggle={() => handleToggle('comfort', 'ac')} />
                          <DiagnosticTile label="Nettoyage Premium" active={formData.comfort?.cleanliness as boolean} onToggle={() => handleToggle('comfort', 'cleanliness')} />
-                         <textarea value={formData.note} onChange={(e) => setFormData({...formData, note: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-100 p-8 rounded-[3rem] outline-none mt-8 focus:border-blue-500 font-bold min-h-[160px] shadow-inner transition-all resize-none" placeholder="Notes additionnelles..."></textarea>
+                         <textarea value={formData.note} onChange={(e) => setFormData({...formData, note: e.target.value})} className="w-full bg-slate-50 border-2 border-red-600/20 p-8 rounded-[3rem] outline-none mt-8 focus:border-red-600 font-bold min-h-[160px] shadow-inner transition-all resize-none" placeholder="Notes additionnelles..."></textarea>
                       </DiagnosticSection>
                    </div>
                  </div>
@@ -555,8 +555,8 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
                  </div>
                )}
             </div>
-            <div className="px-14 py-10 border-t border-slate-100 flex justify-between bg-slate-50/50 shrink-0">
-               <button onClick={() => wizardStep === 1 ? setIsWizardOpen(false) : setWizardStep(1)} disabled={isSaving} className="px-12 py-5 rounded-full font-black text-[11px] uppercase tracking-widest text-slate-400 hover:text-slate-900 transition-all disabled:opacity-30">Annuler</button>
+            <div className="px-14 py-10 border-t border-red-600/20 flex justify-between bg-slate-50/50 shrink-0">
+               <button onClick={() => wizardStep === 1 ? setIsWizardOpen(false) : setWizardStep(1)} disabled={isSaving} className="px-12 py-5 rounded-full font-black text-[11px] uppercase tracking-widest text-red-400/70 hover:text-red-100 transition-all disabled:opacity-30">Annuler</button>
                <button onClick={() => wizardStep === 1 ? setWizardStep(2) : handleSave()} disabled={!formData.carId || isSaving} className="custom-gradient-btn px-20 py-5 rounded-full text-white font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale">
                  {isSaving ? 'Synchronisation...' : wizardStep === 1 ? 'Phase Médias →' : 'Enregistrer'}
                </button>
@@ -571,38 +571,38 @@ export const Inspection: React.FC<InspectionProps> = ({ lang }) => {
 // --- SUB-COMPONENTS ---
 
 const InspectionCard = ({ inspection, onEdit, onView, onPrint, showCreatedDate }: any) => (
-  <div className="bg-white rounded-[4rem] border border-slate-100 p-10 shadow-sm hover:shadow-2xl transition-all duration-700 flex flex-col group h-full">
+  <div className="glass-card rounded-[4rem] border border-red-600/20 p-10 shadow-sm hover:shadow-2xl transition-all duration-700 flex flex-col group h-full">
     <div className="flex justify-between items-start mb-8">
-      <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${inspection.type === 'checkin' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
+      <span className={`px-5 py-2 rounded-full text-[10px] font-black uppercase tracking-widest border-2 ${inspection.type === 'checkin' ? 'bg-blue-50 text-red-400 border-red-600/30' : 'bg-purple-50 text-purple-600 border-purple-100'}`}>
         {inspection.type === 'checkin' ? 'Check-In' : 'Check-Out'}
       </span>
       <div className="text-right">
         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">{inspection.date}</p>
         {showCreatedDate && inspection.created_at && (
-          <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">📅 {new Date(inspection.created_at).toLocaleDateString('fr-FR')}</p>
+          <p className="text-[9px] font-black text-red-400 uppercase tracking-widest">📅 {new Date(inspection.created_at).toLocaleDateString('fr-FR')}</p>
         )}
       </div>
     </div>
-    <h3 className="text-2xl font-black text-slate-900 mb-1 line-clamp-1 tracking-tighter">{inspection.carName}</h3>
-    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-10">{inspection.vin}</p>
-    <div className="bg-slate-50 p-7 rounded-[2.5rem] border border-slate-100/50 flex-grow mb-10 space-y-4 shadow-inner">
+    <h3 className="text-2xl font-black text-red-100 mb-1 line-clamp-1 tracking-tighter">{inspection.carName}</h3>
+    <p className="text-[11px] font-bold text-red-400/70 uppercase tracking-[0.2em] mb-10">{inspection.vin}</p>
+    <div className="bg-red-600/20 p-7 rounded-[2.5rem] border border-red-600/20/50 flex-grow mb-10 space-y-4 shadow-inner">
       <div className="flex justify-between items-center">
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Relevé KM</span>
-        <span className="text-xl font-black text-blue-600 tracking-tighter">{inspection.mileage?.toLocaleString()} KM</span>
+        <span className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Relevé KM</span>
+        <span className="text-xl font-black text-red-400 tracking-tighter">{inspection.mileage?.toLocaleString()} KM</span>
       </div>
-      <div className="h-px bg-slate-200/50"></div>
-      <p className="text-[11px] font-bold text-slate-500 truncate italic">👤 Opérateur : {inspection.partnerName}</p>
+      <div className="h-px bg-red-600/10"></div>
+      <p className="text-[11px] font-bold text-red-400/70 truncate italic">👤 Opérateur : {inspection.partnerName}</p>
       {inspection.created_by && (
         <>
-          <div className="h-px bg-slate-200/50"></div>
-          <p className="text-[11px] font-bold text-slate-600 truncate">📋 Créé par : {inspection.created_by}</p>
+          <div className="h-px bg-red-600/10"></div>
+          <p className="text-[11px] font-bold text-red-400/70 truncate">📋 Créé par : {inspection.created_by}</p>
         </>
       )}
     </div>
     <div className="grid grid-cols-3 gap-2">
       <button onClick={onView} className="bg-slate-900 text-white py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest hover:bg-blue-600 transition-all shadow-lg active:scale-95">👀 Voir</button>
       <button onClick={onEdit} className="bg-amber-50 text-amber-600 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border border-amber-100 hover:bg-amber-100 transition-all active:scale-95">✏️ Editer</button>
-      <button onClick={onPrint} className="bg-blue-50 text-blue-600 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border border-blue-100 hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-lg shadow-blue-500/10">🖨️ Print</button>
+      <button onClick={onPrint} className="bg-blue-50 text-red-400 py-5 rounded-[1.5rem] font-black text-[10px] uppercase tracking-widest border border-red-600/30 hover:bg-blue-600 hover:text-white transition-all active:scale-95 shadow-lg shadow-blue-500/10">🖨️ Print</button>
     </div>
   </div>
 );
@@ -611,21 +611,21 @@ const DiagnosticSection = ({ title, icon, children }: any) => (
   <div className="space-y-8">
      <div className="flex items-center gap-5 border-b border-slate-50 pb-5">
         <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-xl shadow-sm">{icon}</div>
-        <h4 className="text-[12px] font-black text-slate-800 uppercase tracking-[0.2em]">{title}</h4>
+        <h4 className="text-[12px] font-black text-red-100 uppercase tracking-[0.2em]">{title}</h4>
      </div>
      <div className="grid grid-cols-1 gap-4">{children}</div>
   </div>
 );
 
 const DiagnosticTile = ({ label, active, onToggle }: any) => (
-  <button onClick={onToggle} className={`w-full flex items-center justify-between p-5 rounded-[1.8rem] border-2 transition-all duration-300 active:scale-[0.98] ${active ? 'bg-blue-50/50 border-blue-500 shadow-lg shadow-blue-500/10' : 'bg-white border-slate-100 opacity-40 hover:opacity-100 grayscale'}`}>
-     <span className={`text-[11px] font-black uppercase tracking-widest ${active ? 'text-blue-700' : 'text-slate-400'}`}>{label}</span>
-     <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] transition-all duration-500 ${active ? 'bg-blue-600 text-white rotate-[360deg] shadow-lg shadow-blue-500/30' : 'bg-slate-200 text-slate-400'}`}>{active ? '✓' : '✕'}</div>
+  <button onClick={onToggle} className={`w-full flex items-center justify-between p-5 rounded-[1.8rem] border-2 transition-all duration-300 active:scale-[0.98] ${active ? 'bg-blue-50/50 border-red-600 shadow-lg shadow-blue-500/10' : 'bg-white border-red-600/20 opacity-40 hover:opacity-100 grayscale'}`}>
+     <span className={`text-[11px] font-black uppercase tracking-widest ${active ? 'text-blue-700' : 'text-red-400/70'}`}>{label}</span>
+     <div className={`h-8 w-8 rounded-full flex items-center justify-center text-[10px] transition-all duration-500 ${active ? 'bg-blue-600 text-white rotate-[360deg] shadow-lg shadow-blue-500/30' : 'bg-slate-200 text-red-400/70'}`}>{active ? '✓' : '✕'}</div>
   </button>
 );
 
 const CheckItem = ({ label, checked, accent }: any) => (
-  <div className="flex items-center justify-between py-2 border-b border-slate-50 font-bold text-slate-600">
+  <div className="flex items-center justify-between py-2 border-b border-slate-50 font-bold text-red-400/70">
     <span className="text-[11px] uppercase tracking-tight">{label}</span>
     <span className="text-xl" style={{ color: checked ? accent : '#e2e8f0' }}>{checked ? '✓' : '✕'}</span>
   </div>
@@ -647,12 +647,12 @@ const MediaUploader = ({ title, bucket, photos, onUpdate }: any) => {
     <div className="space-y-8">
        <h4 className="text-2xl font-black tracking-tighter flex items-center gap-5"><span className="h-2 w-10 bg-blue-600 rounded-full"></span>{title}</h4>
        <div className="grid grid-cols-2 gap-6">
-          <label className="aspect-[4/3] rounded-[3rem] border-4 border-dashed border-slate-100 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-blue-500 transition-all text-blue-500 shadow-inner group">
+          <label className="aspect-[4/3] rounded-[3rem] border-4 border-dashed border-red-600/20 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50 hover:border-red-600 transition-all text-red-600 shadow-inner group">
              <input type="file" multiple className="hidden" onChange={handleUpload} />
              <span className="text-5xl group-hover:scale-125 transition-transform duration-500">📸</span>
           </label>
           {photos.map((p: any, i: number) => (
-            <div key={i} className="aspect-[4/3] rounded-[3rem] overflow-hidden border-4 border-white shadow-2xl relative group/img hover:scale-[1.03] transition-transform duration-500">
+            <div key={i} className="aspect-[4/3] rounded-[3rem] overflow-hidden border-4 border-red-600/30 shadow-2xl relative group/img hover:scale-[1.03] transition-transform duration-500">
                <img src={p} className="w-full h-full object-cover" />
                <button onClick={() => onUpdate(photos.filter((_: any, idx: number) => idx !== i))} className="absolute top-4 right-4 h-10 w-10 rounded-2xl bg-red-600 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-all shadow-xl">✕</button>
             </div>
@@ -663,9 +663,9 @@ const MediaUploader = ({ title, bucket, photos, onUpdate }: any) => {
 };
 
 const StatBox = ({ label, value }: any) => (
-  <div className="bg-slate-50 p-7 rounded-[2.5rem] border border-slate-100 shadow-inner">
-     <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">{label}</p>
-     <p className="text-lg font-black text-slate-900 truncate tracking-tight">{value}</p>
+  <div className="bg-red-600/20 p-7 rounded-[2.5rem] border border-red-600/20 shadow-inner">
+     <p className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.2em] mb-2">{label}</p>
+     <p className="text-lg font-black text-red-100 truncate tracking-tight">{value}</p>
   </div>
 );
 
@@ -673,7 +673,7 @@ const StatBox = ({ label, value }: any) => (
 
 const InspectorGroup: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
   <div className="space-y-6 animate-in slide-in-from-right-4">
-     <div className="flex items-center gap-4 text-slate-900">
+     <div className="flex items-center gap-4 text-red-100">
         <span className="text-2xl">{icon}</span>
         <h4 className="text-[10px] font-black uppercase tracking-[0.3em]">{title}</h4>
      </div>
@@ -683,37 +683,38 @@ const InspectorGroup: React.FC<{ title: string; icon: string; children: React.Re
 
 const InspectorRange: React.FC<{ label: string; value: number; min: number; max: number; onChange: (v: number) => void }> = ({ label, value, min, max, onChange }) => (
   <div className="space-y-3">
-     <div className="flex justify-between items-center text-[9px] font-black text-slate-400 uppercase tracking-widest">
+     <div className="flex justify-between items-center text-[9px] font-black text-red-400/70 uppercase tracking-widest">
         <span>{label}</span>
-        <span className="text-blue-600">{value}px</span>
+        <span className="text-red-400">{value}px</span>
      </div>
-     <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
+     <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full h-1 bg-red-950/30 rounded-full appearance-none cursor-pointer accent-blue-600" />
   </div>
 );
 
 const InspectorPosition: React.FC<{ value: ElementPosition; onChangeX: (v: number) => void; onChangeY: (v: number) => void }> = ({ value, onChangeX, onChangeY }) => (
   <div className="grid grid-cols-2 gap-6">
      <div className="space-y-3">
-        <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase"><span>Axe X</span><span className="text-blue-600">{value.x}px</span></div>
-        <input type="range" min={-300} max={300} value={value.x} onChange={(e) => onChangeX(Number(e.target.value))} className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
+        <div className="flex justify-between text-[8px] font-black text-red-400/70 uppercase"><span>Axe X</span><span className="text-red-400">{value.x}px</span></div>
+        <input type="range" min={-300} max={300} value={value.x} onChange={(e) => onChangeX(Number(e.target.value))} className="w-full h-1 bg-red-950/30 rounded-full appearance-none cursor-pointer accent-blue-600" />
      </div>
      <div className="space-y-3">
-        <div className="flex justify-between text-[8px] font-black text-slate-400 uppercase"><span>Axe Y</span><span className="text-blue-600">{value.y}px</span></div>
-        <input type="range" min={-100} max={200} value={value.y} onChange={(e) => onChangeY(Number(e.target.value))} className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
+        <div className="flex justify-between text-[8px] font-black text-red-400/70 uppercase"><span>Axe Y</span><span className="text-red-400">{value.y}px</span></div>
+        <input type="range" min={-100} max={200} value={value.y} onChange={(e) => onChangeY(Number(e.target.value))} className="w-full h-1 bg-red-950/30 rounded-full appearance-none cursor-pointer accent-blue-600" />
      </div>
   </div>
 );
 
 const InspectorColor: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
-  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-     <span className="text-[9px] font-black text-slate-400 uppercase">{label}</span>
+  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-red-600/20">
+     <span className="text-[9px] font-black text-red-400/70 uppercase">{label}</span>
      <input type="color" value={value} onChange={(e) => onChange(e.target.value)} className="w-8 h-8 rounded-lg bg-transparent border-none cursor-pointer" />
   </div>
 );
 
 const InspectorText: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
   <div className="space-y-2">
-     <label className="text-[8px] font-black text-slate-400 uppercase ml-2">{label}</label>
-     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-slate-100 p-4 rounded-xl outline-none font-bold text-xs" />
+     <label className="text-[8px] font-black text-red-400/70 uppercase ml-2">{label}</label>
+     <input type="text" value={value} onChange={(e) => onChange(e.target.value)} className="w-full bg-slate-50 border-2 border-red-600/20 p-4 rounded-xl outline-none font-bold text-xs" />
   </div>
 );
+
