@@ -21,7 +21,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
   const t = translations[lang];
   const [history, setHistory] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'sale' | 'purchase' | 'checkin' | 'checkout'>('all');
+  const [filter, setFilter] = useState<'all' | 'sale' | 'purchase'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showDebtsOnly, setShowDebtsOnly] = useState(false);
   
@@ -44,6 +44,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
   const [isUpdatingPayment, setIsUpdatingPayment] = useState(false);
   const [selectedItemForDetails, setSelectedItemForDetails] = useState<any | null>(null);
   const [allInspections, setAllInspections] = useState<any[]>([]);
+  const [sales, setSales] = useState<any[]>([]);
 
   useEffect(() => {
     fetchHistory();
@@ -81,13 +82,12 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
   const fetchHistory = async () => {
     setLoading(true);
     try {
-      const [salesRes, inspectionsRes, purchasesRes] = await Promise.all([
+      const [salesRes, purchasesRes] = await Promise.all([
         supabase.from('sales').select('*').order('created_at', { ascending: false }),
-        supabase.from('inspections').select('*').order('created_at', { ascending: false }),
         supabase.from('purchases').select('*').order('created_at', { ascending: false })
       ]);
 
-      const sales = (salesRes.data || []).map(s => ({
+      const salesData = (salesRes.data || []).map(s => ({
         ...s,
         type: 'sale',
         ref: `VNT-${s.id.slice(0, 8).toUpperCase()}`,
@@ -115,23 +115,8 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
         raw: p
       }));
 
-      const inspectionsList = inspectionsRes.data || [];
-      const inspections = inspectionsList.map((i: any) => ({
-        ...i,
-        type: i.type === 'checkin' ? 'checkin' : i.type === 'checkout' ? 'checkout' : i.type,
-        ref: `INSP-${i.id.slice(0, 8).toUpperCase()}`,
-        date: new Date(i.created_at).toLocaleDateString('fr-FR'),
-        partner: i.partner_name || 'Inspection',
-        car: i.car_name,
-        amount: 0,
-        paid: 0,
-        balance: 0,
-        isImpaye: false,
-        raw: i
-      }));
-
-      setAllInspections(inspectionsList); // raw inspection records for lookup
-      setHistory([...sales, ...purchases, ...inspections].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      setSales(salesData);
+      setHistory([...salesData, ...purchases].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (err) {
       console.error('Fetch History Error:', err);
     } finally {
@@ -140,14 +125,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
   };
 
   const filtered = history.filter(item => {
-    // Grouped filters: Check-in = purchases + checkin inspections (vehicle intake)
-    //                  Check-out = sales + checkout inspections (vehicle exit)
     let matchesFilter = filter === 'all' || item.type === filter;
-    if (filter === 'checkin') {
-      matchesFilter = item.type === 'checkin' || item.type === 'purchase';
-    } else if (filter === 'checkout') {
-      matchesFilter = item.type === 'checkout' || item.type === 'sale';
-    }
 
     const matchesDebt = !showDebtsOnly || (item.isImpaye === true);
 
@@ -317,8 +295,6 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                { key: 'all',      label: '🗂️ Tous',       color: '' },
                { key: 'sale',     label: '🛍️ Ventes',    color: '' },
                { key: 'purchase', label: '🛒 Achats',     color: '' },
-               { key: 'checkin',  label: '📥 Entrées',    color: 'blue' },
-               { key: 'checkout', label: '📤 Sorties',    color: 'purple' },
              ].map(f => (
                <button
                  key={f.key}
@@ -337,32 +313,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
       </div>
 
       {/* Contextual banner for grouped inspection filters */}
-      {(filter === 'checkin' || filter === 'checkout') && (
-        <div className={`rounded-[2rem] px-8 py-5 flex items-center gap-5 border-2 ${
-          filter === 'checkin'
-            ? 'bg-blue-50 border-red-600/30 text-blue-700'
-            : 'bg-purple-50 border-purple-100 text-purple-700'
-        }`}>
-          <span className="text-3xl">{filter === 'checkin' ? '📥' : '📤'}</span>
-          <div className="flex-grow">
-            <p className="font-black text-sm uppercase tracking-widest">
-              {filter === 'checkin' ? 'Vue Entrées Flotte' : 'Vue Sorties Flotte'}
-            </p>
-            <p className="text-[10px] font-bold opacity-70 mt-0.5">
-              {filter === 'checkin'
-                ? 'Affiche les achats véhicules + inspections Check-In (réception flotte)'
-                : 'Affiche les ventes véhicules + inspections Check-Out (livraison flotte)'}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={`px-4 py-2 rounded-[1rem] text-[10px] font-black border ${
-              filter === 'checkin' ? 'bg-blue-100 border-blue-200' : 'bg-purple-100 border-purple-200'
-            }`}>
-              {filtered.length} enregistrements
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Removed - No longer needed as we removed checkin/checkout filters */}
 
       <div className="glass-card rounded-[3rem] border border-red-600/40 shadow-xl overflow-hidden min-h-[400px] bg-gradient-to-b from-red-950/20 to-slate-900/40">
          <table className="w-full text-left">
@@ -386,7 +337,7 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                     <td className="px-8 py-8">
                        <div className="flex items-center gap-2">
                           <span className={`px-4 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${getTypeStyle(item.type)}`}>
-                             {item.type === 'checkin' ? '📥 Checkin' : item.type === 'checkout' ? '📤 Checkout' : item.type === 'sale' ? '🛍️ Vente' : '🛒 Achat'}
+                             {item.type === 'sale' ? '🛍️ Vente' : '🛒 Achat'}
                           </span>
                           {item.isImpaye && <span className="text-xl animate-pulse" title="Impayé">⚠️</span>}
                        </div>
