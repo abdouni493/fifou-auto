@@ -819,89 +819,103 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md animate-in fade-in duration-300" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[4rem] shadow-2xl flex flex-col animate-in zoom-in-95 duration-500 border border-red-600/30">
+    return (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative glass-card w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
         
-        {/* Header */}
-        <div className="px-12 py-10 flex items-center justify-between bg-white shrink-0">
+        {/* Modal Header */}
+        <div className="px-6 md:px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
           <div className="flex items-center gap-6">
-            <div className="h-16 w-16 rounded-[1.8rem] bg-blue-600 text-white flex items-center justify-center text-4xl shadow-xl">🛒</div>
+            <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">🛒</div>
             <div>
-              <h2 className="text-4xl font-black text-red-100 tracking-tight">{initialData ? "Modifier l'Achat" : "Nouvel Achat Véhicule"}</h2>
-              <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">Acquisition Showroom</p>
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">{initialData ? "Modifier l'Achat" : "Nouvel Achat Véhicule"}</h2>
+              <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">Acquisition Showroom</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-14 w-14 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70 shadow-sm">✕</button>
+          <button onClick={onClose} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="relative z-10 text-white">✕</div>
+          </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-grow overflow-y-auto custom-scrollbar bg-white px-12 pb-12">
-          <div className="space-y-12">
+        <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8">
+          <div className="flex flex-col lg:flex-row gap-8 py-8">
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              
-              {/* SECTION 1: SOURCE & IDENTITÉ */}
-              <Section title="Source & Identité" icon="🤝">
-                 <div className="space-y-6">
-                    {/* Source Switcher */}
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Origine du Véhicule</label>
-                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
-                          <button 
-                            type="button" 
-                            onClick={() => setPurchaseType('supplier')} 
-                            className={`flex-1 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${purchaseType === 'supplier' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}
-                          >
-                             <span>🏢</span> Fournisseur
-                          </button>
-                          <button 
-                            type="button" 
-                            onClick={() => setPurchaseType('client')} 
-                            className={`flex-1 py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${purchaseType === 'client' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}
-                          >
-                             <span>👤</span> Client Showroom
-                          </button>
-                       </div>
+            {/* Left Column - Photos & Basic Source */}
+            <div className="lg:w-1/3 flex flex-col space-y-8">
+              <Section title="Média & Visuels" icon="📸">
+                 <div className="grid grid-cols-2 gap-4">
+                    {formData.photo_urls?.map((p, i) => (
+                      <div key={i} className="h-32 rounded-2xl border border-red-600/30 shadow-xl overflow-hidden group/img relative">
+                         <img src={p} className="w-full h-full object-cover" />
+                         <button onClick={() => setFormData({...formData, photo_urls: formData.photo_urls?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-6 w-6 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity text-xs">✕</button>
+                      </div>
+                    ))}
+                    <label className="h-32 rounded-2xl border-2 border-dashed border-red-600/30 flex flex-col items-center justify-center cursor-pointer hover:bg-red-600/10 transition-all text-red-400">
+                       <input type="file" multiple className="hidden" onChange={handlePhotos} />
+                       <span className="text-3xl">➕</span>
+                       <span className="text-[10px] font-black uppercase mt-2">Ajouter Photo</span>
+                    </label>
+                 </div>
+              </Section>
+
+              <Section title="Origine du Véhicule" icon="🤝">
+                 <div className="space-y-4">
+                    <div className="flex p-1 bg-slate-900/50 rounded-2xl border border-red-600/30">
+                       <button 
+                         type="button" 
+                         onClick={() => setPurchaseType('supplier')} 
+                         className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${purchaseType === 'supplier' ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/70 hover:text-red-300'}`}
+                       >
+                          <span>🏢</span> Fournisseur
+                       </button>
+                       <button 
+                         type="button" 
+                         onClick={() => setPurchaseType('client')} 
+                         className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${purchaseType === 'client' ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/70 hover:text-red-300'}`}
+                       >
+                          <span>👤</span> Client
+                       </button>
                     </div>
 
                     {purchaseType === 'supplier' ? (
                       <div className="space-y-2">
-                         <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Partenaire Fournisseur</label>
+                         <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Partenaire Fournisseur</label>
                          <select 
                            name="supplierId" 
                            value={formData.supplierId} 
                            onChange={handleSupplierChange}
-                           className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 appearance-none shadow-inner text-lg"
+                           className="w-full bg-slate-900/30 border border-red-600/30 px-4 py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 font-black text-red-200 text-sm"
                          >
-                           <option value="">Sélectionner un fournisseur...</option>
-                           {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                           <option value="" className="bg-slate-900">Sélectionner un fournisseur...</option>
+                           {suppliers.map(s => <option key={s.id} value={s.id} className="bg-slate-900">{s.name}</option>)}
                          </select>
                       </div>
                     ) : (
                       <div className="space-y-4">
-                         <div className="flex items-center justify-between px-3">
-                           <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Choisir un Client</label>
+                         <div className="flex items-center justify-between px-2">
+                           <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Rechercher Client</label>
                            <button 
                              type="button" 
                              onClick={() => setIsClientModalOpen(true)}
-                             className="text-[10px] font-black text-red-400 uppercase tracking-widest hover:underline"
+                             className="text-[10px] font-black text-red-500 uppercase tracking-widest hover:underline"
                            >
-                             + Nouveau Client
+                             + Nouveau
                            </button>
                          </div>
                          <div className="relative group/search">
-                           <span className="absolute left-6 top-1/2 -translate-y-1/2 text-xl opacity-20">🔍</span>
+                           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-40">🔍</span>
                            <input 
                              type="text" 
-                             placeholder="Rechercher par nom ou téléphone..." 
+                             placeholder="Nom ou téléphone..." 
                              value={clientSearch}
                              onChange={(e) => setClientSearch(e.target.value)}
-                             className="w-full bg-slate-50 border-2 border-red-600/20 pl-16 pr-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-inner"
+                             className="w-full bg-slate-900/30 border border-red-600/30 pl-12 pr-4 py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 font-black text-red-200 text-sm"
                            />
                            {clientSearch && (
-                             <div className="absolute top-full left-0 right-0 mt-2 glass-card border border-red-600/30 rounded-3xl shadow-2xl z-[150] max-h-60 overflow-y-auto custom-scrollbar p-2">
+                             <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-red-600/40 rounded-2xl shadow-2xl z-[150] max-h-60 overflow-y-auto custom-scrollbar p-2">
                                {clients.filter(c => 
                                  `${c.first_name} ${c.last_name}`.toLowerCase().includes(clientSearch.toLowerCase()) || 
                                  c.mobile1.includes(clientSearch)
@@ -920,14 +934,14 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                                      });
                                      setClientSearch(`${c.first_name} ${c.last_name}`);
                                    }}
-                                   className="w-full text-left px-6 py-4 hover:bg-blue-50 rounded-2xl flex items-center gap-4 transition-colors"
+                                   className="w-full text-left px-4 py-3 hover:bg-red-600/20 rounded-xl flex items-center gap-3 transition-colors border border-transparent hover:border-red-600/30"
                                  >
-                                   <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-lg">
+                                   <div className="h-8 w-8 rounded-full bg-red-600/20 flex items-center justify-center text-sm border border-red-600/30">
                                      {c.photo_url ? <img src={c.photo_url} className="w-full h-full object-cover rounded-full" /> : '👤'}
                                    </div>
                                    <div>
-                                     <p className="font-black text-red-100 text-sm">{c.first_name} {c.last_name}</p>
-                                     <p className="text-[10px] font-bold text-red-400/70">{c.mobile1}</p>
+                                     <p className="font-black text-red-100 text-xs">{c.first_name} {c.last_name}</p>
+                                     <p className="text-[9px] font-bold text-red-400/60">{c.mobile1}</p>
                                    </div>
                                  </button>
                                ))}
@@ -935,86 +949,65 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                            )}
                          </div>
                          {formData.clientId && (
-                           <div className="bg-blue-50 border border-red-600/30 p-4 rounded-2xl flex items-center justify-between">
+                           <div className="bg-emerald-600/10 border border-emerald-600/30 p-3 rounded-xl flex items-center justify-between">
                              <div className="flex items-center gap-3">
-                               <span className="text-xl">✅</span>
+                               <span className="text-emerald-500">✅</span>
                                <div>
-                                 <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Client Sélectionné</p>
-                                 <p className="font-black text-blue-700">{formData.clientName}</p>
+                                 <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Client Sélectionné</p>
+                                 <p className="font-black text-emerald-200 text-xs">{formData.clientName}</p>
                                </div>
                              </div>
-                             <button type="button" onClick={() => setFormData({...formData, clientId: '', clientName: '', clientPhone: ''})} className="text-blue-400 hover:text-red-500">✕</button>
+                             <button type="button" onClick={() => setFormData({...formData, clientId: '', clientName: '', clientPhone: ''})} className="text-emerald-400 hover:text-red-500">✕</button>
                            </div>
                          )}
                       </div>
                     )}
-
-                    <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
-                      <Field label="Marque" name="make" value={formData.make} onChange={handleChange} placeholder="ex: Mercedes-Benz" emoji="🏷️" />
-                      <Field label="Modèle" name="model" value={formData.model} onChange={handleChange} placeholder="ex: S-Class" emoji="🚗" />
-                      <Field label="Immatriculation" name="plate" value={formData.plate} onChange={handleChange} placeholder="ex: 12345-123-16" emoji="🔢" />
-                      <Field label="Année" name="year" value={formData.year} onChange={handleChange} placeholder="2026" emoji="📅" />
-                      <div className="col-span-2">
-                        <Field label="Couleur" name="color" value={formData.color} onChange={handleChange} placeholder="ex: Obsidian Black" emoji="🎨" />
-                      </div>
-                      <div className="col-span-2">
-                        <Field label="Numéro de Châssis (VIN)" name="vin" value={formData.vin} onChange={handleChange} emoji="🔐" />
-                      </div>
-                    </div>
                  </div>
               </Section>
+            </div>
 
-              {/* SECTION 2: CARACTÉRISTIQUES */}
-              <Section title="Fiche Technique" icon="⚙️">
-                 <div className="grid grid-cols-2 gap-6">
+            {/* Right Column - Fiche Technique & Administration */}
+            <div className="lg:w-2/3 space-y-8">
+              <Section title="Informations Véhicule" icon="🚗">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Field label="Marque" name="make" value={formData.make} onChange={handleChange} placeholder="ex: Mercedes-Benz" emoji="🏷️" />
+                    <Field label="Modèle" name="model" value={formData.model} onChange={handleChange} placeholder="ex: S-Class" emoji="🚗" />
+                    <Field label="Immatriculation" name="plate" value={formData.plate} onChange={handleChange} placeholder="ex: 12345-123-16" emoji="🔢" />
+                    <Field label="Année" name="year" value={formData.year} onChange={handleChange} placeholder="2026" emoji="📅" />
+                    <Field label="Couleur" name="color" value={formData.color} onChange={handleChange} placeholder="ex: Obsidian Black" emoji="🎨" />
+                    <Field label="Châssis (VIN)" name="vin" value={formData.vin} onChange={handleChange} emoji="🔐" />
+                    
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Boîte de Vitesse</label>
-                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
+                       <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Boîte de Vitesse</label>
+                       <div className="flex p-1 bg-slate-900/50 rounded-2xl border border-red-600/30">
                           {['Manuelle', 'Automatique'].map(t => (
-                            <button key={t} type="button" onClick={() => setFormData({...formData, transmission: (t === 'Automatique' ? 'auto' : t.toLowerCase()) as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.transmission === (t === 'Automatique' ? 'auto' : t.toLowerCase()) ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>
+                            <button key={t} type="button" onClick={() => setFormData({...formData, transmission: (t === 'Automatique' ? 'auto' : t.toLowerCase()) as any})} className={`flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.transmission === (t === 'Automatique' ? 'auto' : t.toLowerCase()) ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/70 hover:text-red-300'}`}>
                                {t}
                             </button>
                           ))}
                        </div>
                     </div>
                     <div className="space-y-2">
-                       <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3">Énergie</label>
-                       <div className="flex p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
+                       <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Énergie</label>
+                       <div className="flex p-1 bg-slate-900/50 rounded-2xl border border-red-600/30">
                           {['Essence', 'Diesel'].map(e => (
-                            <button key={e} type="button" onClick={() => setFormData({...formData, fuel: e.toLowerCase() as any})} className={`flex-1 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.fuel === e.toLowerCase() ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>
+                            <button key={e} type="button" onClick={() => setFormData({...formData, fuel: e.toLowerCase() as any})} className={`flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${formData.fuel === e.toLowerCase() ? 'bg-red-600 text-white shadow-lg' : 'text-red-400/70 hover:text-red-300'}`}>
                                {e}
                             </button>
                           ))}
                        </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                       <Field label="Places" name="seats" type="number" value={formData.seats} onChange={handleChange} placeholder="5" emoji="👥" />
-                       <Field label="Portes" name="doors" type="number" value={formData.doors} onChange={handleChange} emoji="🚪" />
+                    <Field label="Places" name="seats" type="number" value={formData.seats} onChange={handleChange} emoji="👥" />
+                    <Field label="Portes" name="doors" type="number" value={formData.doors} onChange={handleChange} emoji="🚪" />
+                    <div className="md:col-span-2">
+                      <Field label="Kilométrage" name="mileage" type="number" value={formData.mileage} onChange={handleChange} placeholder="0" emoji="📊" />
                     </div>
-                    <Field label="Kilométrage" name="mileage" type="number" value={formData.mileage} onChange={handleChange} placeholder="0" emoji="📊" />
                  </div>
               </Section>
 
-              {/* SECTION 3: MÉDIA & VISUELS */}
-              <Section title="Média & Visuels" icon="📸">
-                 <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
-                    {formData.photo_urls?.map((p, i) => (
-                      <div key={i} className="h-44 w-36 shrink-0 rounded-[2.5rem] border-[4px] border-red-600/30 shadow-xl overflow-hidden group/img relative">
-                         <img src={p} className="w-full h-full object-cover" />
-                         <button onClick={() => setFormData({...formData, photo_urls: formData.photo_urls?.filter((_, idx) => idx !== i)})} className="absolute top-2 right-2 h-7 w-7 bg-red-600 text-white rounded-lg flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity">✕</button>
-                      </div>
-                    ))}
-                    <label className="h-44 w-36 shrink-0 rounded-[2.5rem] border-2 border-dashed border-red-600/30 flex flex-col items-center justify-center cursor-pointer hover:bg-blue-50/50 hover:border-red-600 transition-all text-red-600">
-                       <input type="file" multiple className="hidden" onChange={handlePhotos} />
-                       <span className="text-4xl">➕</span>
-                    </label>
-                 </div>
-              </Section>
-
-              {/* SECTION 4: ADMINISTRATION */}
-              <Section title="Administration & Prix" icon="📜">
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="sm:col-span-2 grid grid-cols-1 gap-6">
+              <Section title="Administration & Prix" icon="💰">
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
                        <TextAreaField 
                          label="Informations supplémentaires" 
                          name="carInfo" 
@@ -1022,251 +1015,188 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
                          onChange={(e: any) => setFormData({...formData, carInfo: e.target.value})}
                          placeholder="Carrosserie, accidents, état général..."
                          emoji="ℹ️"
-                         minHeight="120px"
+                         minHeight="80px"
                        />
+                    </div>
+                    <div className="md:col-span-2">
                        <TextAreaField 
                          label="Notes internes" 
                          name="carNotes" 
                          value={formData.carNotes} 
                          onChange={(e: any) => setFormData({...formData, carNotes: e.target.value})}
-                         placeholder="Notes pour le showroom..."
+                         placeholder="Notes confidentielles..."
                          emoji="📝"
-                         minHeight="100px"
+                         minHeight="80px"
                        />
                     </div>
-
-                    <div className="sm:col-span-2 pt-4 border-t border-red-600/20">
+                    <div className="md:col-span-2">
                        <Field label="Date & Heure d'Achat" name="purchaseDateTime" type="datetime-local" value={formData.purchaseDateTime} onChange={handleChange} emoji="⏰" />
                     </div>
-                    
-                    <div className="sm:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-50">
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>💰</span> Prix Initial Client</label>
-                          <div className="relative">
-                            <input type="number" name="initialClientPrice" value={formData.initialClientPrice} onChange={handleChange} className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-amber-500 font-black text-amber-600 text-xl shadow-inner" />
-                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-slate-300">DA</span>
-                          </div>
-                       </div>
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>🏷️</span> Coût Total Achat</label>
-                          <div className="relative">
-                            <input type="number" name="totalCost" value={formData.totalCost} onChange={handleChange} className="w-full bg-slate-50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-500 font-black text-red-600 text-xl shadow-inner" />
-                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-slate-300">DA</span>
-                          </div>
-                       </div>
-                       <div className="space-y-2">
-                          <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2"><span>💵</span> Prix de Vente Showroom</label>
-                          <div className="relative">
-                            <input type="number" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="w-full bg-blue-50 border-2 border-red-600/30 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-black text-red-400 text-2xl shadow-inner" />
-                            <span className="absolute right-8 top-1/2 -translate-y-1/2 text-xs font-black text-blue-300">DA</span>
-                          </div>
-                       </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Prix Initial Client</label>
+                      <div className="relative">
+                        <input type="number" name="initialClientPrice" value={formData.initialClientPrice} onChange={handleChange} className="w-full bg-slate-900/30 border border-red-600/30 px-4 py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-amber-500 font-black text-amber-500 text-sm" />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-amber-500/50">DA</span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Coût Total Achat</label>
+                      <div className="relative">
+                        <input type="number" name="totalCost" value={formData.totalCost} onChange={handleChange} className="w-full bg-slate-900/30 border border-red-600/30 px-4 py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 font-black text-red-400 text-sm" />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-red-400/50">DA</span>
+                      </div>
+                    </div>
+                    <div className="md:col-span-2 space-y-2">
+                      <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Prix de Vente Showroom</label>
+                      <div className="relative">
+                        <input type="number" name="sellingPrice" value={formData.sellingPrice} onChange={handleChange} className="w-full bg-emerald-600/10 border border-emerald-600/30 px-4 py-4 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-emerald-500 font-black text-emerald-400 text-lg shadow-inner" />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-emerald-400/50">DA</span>
+                      </div>
                     </div>
                  </div>
               </Section>
-
             </div>
+          </div>
 
-            {/* SECTION 5: CONTRÔLE D'INSPECTION FULL WIDTH */}
+          {/* Inspection Section - Full Width */}
+          <div className="py-8">
             <Section title="Contrôle d'Inspection (Check-In)" icon="🛡️">
               <div className="space-y-8">
                 {/* Safety Checklist */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3 pb-4 border-b-2 border-blue-200">
-                    <span className="text-2xl">🛡️</span>
-                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Contrôle Sécurité</h5>
+                  <div className="flex items-center gap-3 pb-3 border-b border-red-600/20">
+                    <span className="text-xl">🛡️</span>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Sécurité</h5>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {/* Template Safety Items */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {Object.entries(formData.safety || {}).map(([key, val]) => (
-                      <div key={key} className="relative flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-200 group">
-                        <label className="flex items-center gap-3 cursor-pointer flex-1">
-                          <input 
-                            type="checkbox" 
-                            checked={val as boolean}
-                            onChange={(e) => setFormData({
-                              ...formData,
-                              safety: { ...(formData.safety || {}), [key]: e.target.checked }
-                            })}
-                            className="w-5 h-5 rounded cursor-pointer"
-                          />
-                          <span className="text-sm font-bold text-red-100">{key}</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteCustomItem('safety', key);
-                          }}
-                          className="h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
-                          title="Delete"
-                        >
-                          ✕
-                        </button>
+                      <div key={key} className="relative flex items-center gap-2 p-3 bg-slate-900/50 rounded-xl border border-red-600/20 group hover:border-red-600/40 transition-all">
+                        <input 
+                          type="checkbox" 
+                          checked={val as boolean}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            safety: { ...(formData.safety || {}), [key]: e.target.checked }
+                          })}
+                          className="w-4 h-4 rounded border-red-600/40 text-red-600 focus:ring-red-500 bg-slate-900"
+                        />
+                        <span className="text-[11px] font-black text-red-200 truncate">{key}</span>
+                        <button type="button" onClick={() => deleteCustomItem('safety', key)} className="absolute -top-2 -right-2 h-5 w-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
                       </div>
                     ))}
-                  </div>
-                  {/* Add Custom Safety Item */}
-                  <div className="flex gap-2 mt-4">
-                    <input
-                      type="text"
-                      placeholder="Add custom safety check..."
-                      value={newSafetyItem}
-                      onChange={(e) => setNewSafetyItem(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          addCustomItem('safety', newSafetyItem);
-                        }
-                      }}
-                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-red-600 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addCustomItem('safety', newSafetyItem)}
-                      className="px-6 py-2 bg-blue-600 text-white rounded-2xl font-bold text-sm hover:bg-blue-700 transition-all"
-                    >
-                      ➕ Add
-                    </button>
+                    <div className="relative group/add flex items-center h-[46px]">
+                      <input
+                        type="text"
+                        placeholder="Nouveau..."
+                        value={newSafetyItem}
+                        onChange={(e) => setNewSafetyItem(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addCustomItem('safety', newSafetyItem)}
+                        className="w-full h-full bg-slate-900/30 border border-dashed border-red-600/40 rounded-xl px-3 pr-10 text-[11px] font-black text-red-200 outline-none focus:border-red-600/60"
+                      />
+                      <button onClick={() => addCustomItem('safety', newSafetyItem)} className="absolute right-2 text-red-500 hover:text-red-300">➕</button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Equipment Checklist */}
-                <div className="space-y-4 pt-6">
-                  <div className="flex items-center gap-3 pb-4 border-b-2 border-green-200">
-                    <span className="text-2xl">🧰</span>
-                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Dotation Bord</h5>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-3 border-b border-red-600/20">
+                    <span className="text-xl">🧰</span>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Équipements</h5>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {/* Template Equipment Items */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {Object.entries(formData.equipment || {}).map(([key, val]) => (
-                      <div key={key} className="relative flex items-center gap-3 p-4 bg-green-50 rounded-2xl border border-green-200 group">
-                        <label className="flex items-center gap-3 cursor-pointer flex-1">
-                          <input 
-                            type="checkbox" 
-                            checked={val as boolean}
-                            onChange={(e) => setFormData({
-                              ...formData,
-                              equipment: { ...(formData.equipment || {}), [key]: e.target.checked }
-                            })}
-                            className="w-5 h-5 rounded cursor-pointer"
-                          />
-                          <span className="text-sm font-bold text-red-100">{key}</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteCustomItem('equipment', key);
-                          }}
-                          className="h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
-                          title="Delete"
-                        >
-                          ✕
-                        </button>
+                      <div key={key} className="relative flex items-center gap-2 p-3 bg-slate-900/50 rounded-xl border border-red-600/20 group hover:border-red-600/40 transition-all">
+                        <input 
+                          type="checkbox" 
+                          checked={val as boolean}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            equipment: { ...(formData.equipment || {}), [key]: e.target.checked }
+                          })}
+                          className="w-4 h-4 rounded border-red-600/40 text-red-600 focus:ring-red-500 bg-slate-900"
+                        />
+                        <span className="text-[11px] font-black text-red-200 truncate">{key}</span>
+                        <button type="button" onClick={() => deleteCustomItem('equipment', key)} className="absolute -top-2 -right-2 h-5 w-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
                       </div>
                     ))}
-                  </div>
-                  {/* Add Custom Equipment Item */}
-                  <div className="flex gap-2 mt-4">
-                    <input
-                      type="text"
-                      placeholder="Add custom equipment check..."
-                      value={newEquipmentItem}
-                      onChange={(e) => setNewEquipmentItem(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          addCustomItem('equipment', newEquipmentItem);
-                        }
-                      }}
-                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-green-500 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addCustomItem('equipment', newEquipmentItem)}
-                      className="px-6 py-2 bg-green-600 text-white rounded-2xl font-bold text-sm hover:bg-green-700 transition-all"
-                    >
-                      ➕ Add
-                    </button>
+                    <div className="relative group/add flex items-center h-[46px]">
+                      <input
+                        type="text"
+                        placeholder="Nouveau..."
+                        value={newEquipmentItem}
+                        onChange={(e) => setNewEquipmentItem(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addCustomItem('equipment', newEquipmentItem)}
+                        className="w-full h-full bg-slate-900/30 border border-dashed border-red-600/40 rounded-xl px-3 pr-10 text-[11px] font-black text-red-200 outline-none focus:border-red-600/60"
+                      />
+                      <button onClick={() => addCustomItem('equipment', newEquipmentItem)} className="absolute right-2 text-red-500 hover:text-red-300">➕</button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Comfort Checklist */}
-                <div className="space-y-4 pt-6">
-                  <div className="flex items-center gap-3 pb-4 border-b-2 border-purple-200">
-                    <span className="text-2xl">✨</span>
-                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">État & Ambiance</h5>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 pb-3 border-b border-red-600/20">
+                    <span className="text-xl">✨</span>
+                    <h5 className="text-sm font-black text-red-100 uppercase tracking-widest">Confort & État</h5>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {/* Template Comfort Items */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                     {Object.entries(formData.comfort || {}).map(([key, val]) => (
-                      <div key={key} className="relative flex items-center gap-3 p-4 bg-purple-50 rounded-2xl border border-purple-200 group">
-                        <label className="flex items-center gap-3 cursor-pointer flex-1">
-                          <input 
-                            type="checkbox" 
-                            checked={val as boolean}
-                            onChange={(e) => setFormData({
-                              ...formData,
-                              comfort: { ...(formData.comfort || {}), [key]: e.target.checked }
-                            })}
-                            className="w-5 h-5 rounded cursor-pointer"
-                          />
-                          <span className="text-sm font-bold text-red-100">{key}</span>
-                        </label>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            deleteCustomItem('comfort', key);
-                          }}
-                          className="h-6 w-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs hover:bg-red-600 transition-all opacity-0 group-hover:opacity-100"
-                          title="Delete"
-                        >
-                          ✕
-                        </button>
+                      <div key={key} className="relative flex items-center gap-2 p-3 bg-slate-900/50 rounded-xl border border-red-600/20 group hover:border-red-600/40 transition-all">
+                        <input 
+                          type="checkbox" 
+                          checked={val as boolean}
+                          onChange={(e) => setFormData({
+                            ...formData,
+                            comfort: { ...(formData.comfort || {}), [key]: e.target.checked }
+                          })}
+                          className="w-4 h-4 rounded border-red-600/40 text-red-600 focus:ring-red-500 bg-slate-900"
+                        />
+                        <span className="text-[11px] font-black text-red-200 truncate">{key}</span>
+                        <button type="button" onClick={() => deleteCustomItem('comfort', key)} className="absolute -top-2 -right-2 h-5 w-5 bg-red-600 text-white rounded-full flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-all shadow-lg">✕</button>
                       </div>
                     ))}
-                  </div>
-                  {/* Add Custom Comfort Item */}
-                  <div className="flex gap-2 mt-4">
-                    <input
-                      type="text"
-                      placeholder="Add custom comfort check..."
-                      value={newComfortItem}
-                      onChange={(e) => setNewComfortItem(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          addCustomItem('comfort', newComfortItem);
-                        }
-                      }}
-                      className="flex-1 px-4 py-2 border-2 border-red-600/30 rounded-2xl focus:outline-none focus:border-purple-500 text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => addCustomItem('comfort', newComfortItem)}
-                      className="px-6 py-2 bg-purple-600 text-white rounded-2xl font-bold text-sm hover:bg-purple-700 transition-all"
-                    >
-                      ➕ Add
-                    </button>
+                    <div className="relative group/add flex items-center h-[46px]">
+                      <input
+                        type="text"
+                        placeholder="Nouveau..."
+                        value={newComfortItem}
+                        onChange={(e) => setNewComfortItem(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && addCustomItem('comfort', newComfortItem)}
+                        className="w-full h-full bg-slate-900/30 border border-dashed border-red-600/40 rounded-xl px-3 pr-10 text-[11px] font-black text-red-200 outline-none focus:border-red-600/60"
+                      />
+                      <button onClick={() => addCustomItem('comfort', newComfortItem)} className="absolute right-2 text-red-500 hover:text-red-300">➕</button>
+                    </div>
                   </div>
                 </div>
               </div>
             </Section>
-
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-12 py-10 bg-white border-t border-slate-50 flex items-center justify-center gap-8 shrink-0">
-          <button onClick={onClose} className="px-16 py-5 glass-card border border-red-600/30 rounded-[2.5rem] font-black text-[11px] uppercase tracking-widest text-red-400/70 hover:bg-slate-50">Annuler</button>
-          <button onClick={() => { console.log('Submitting form data:', formData); onSubmit(formData); }} className="custom-gradient-btn px-24 py-5 rounded-[2.5rem] text-white font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Enregistrer le véhicule</button>
+        {/* Modal Footer */}
+        <div className="px-8 py-6 bg-slate-900/50 border-t border-red-600/40 flex justify-end gap-4 shrink-0">
+          <button 
+            onClick={onClose} 
+            className="px-8 py-3 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-xl hover:bg-slate-900/70 transition-all uppercase tracking-wider text-[10px]"
+          >
+            Annuler
+          </button>
+          <button 
+            onClick={() => onSubmit(formData)}
+            className="group relative px-12 py-3 rounded-xl overflow-hidden font-black uppercase tracking-widest text-[10px] transition-all duration-300 shadow-2xl shadow-red-600/20"
+          >
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            <div className="relative z-10 flex items-center justify-center gap-2 text-white">
+              <span>{initialData ? 'Mettre à jour l\'Achat' : 'Confirmer l\'Achat'}</span>
+            </div>
+          </button>
         </div>
 
-        {/* Client Creation Modal */}
         {isClientModalOpen && (
           <ClientForm 
+            lang={lang} 
             onClose={() => setIsClientModalOpen(false)} 
             onSubmit={async (newClientData) => {
               try {
@@ -1297,19 +1227,18 @@ const PurchaseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (d
 };
 
 const Section: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
-  <div className="bg-[#fcfcfc] rounded-[3.5rem] p-10 space-y-8 border border-red-600/20/50">
-     <div className="flex items-center gap-6">
-        <div className="h-12 w-12 rounded-2xl bg-white text-red-100 flex items-center justify-center text-2xl shadow-sm border border-red-600/20">{icon}</div>
-        <h4 className="text-xl font-black text-red-100 tracking-tight">{title}</h4>
-     </div>
-     <div>{children}</div>
+  <div className="bg-red-600/10 rounded-[2rem] p-6 space-y-6 border border-red-600/30">
+    <div className="flex items-center gap-4">
+       <div className="h-10 w-10 rounded-lg bg-red-600/30 text-red-300 flex items-center justify-center text-lg border border-red-600/30">{icon}</div>
+       <h4 className="text-lg font-black text-red-200 tracking-tight">{title}</h4>
+    </div>
+    <div>{children}</div>
   </div>
 );
 
 // --- PURCHASE DETAILS MODAL ---
 const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => void; lang: Language }> = ({ purchase, onClose, lang }) => {
   const t = translations[lang];
-  console.log('PurchaseDetailsModal received:', purchase);
   const totalCost = purchase.totalCost || 0;
   const sellingPrice = purchase.sellingPrice || 0;
   const initialClientPrice = purchase.initialClientPrice || 0;
@@ -1320,245 +1249,177 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
   const partnerPhoto = (purchase as any).supplier?.photo_url || (purchase as any).client?.photo_url;
 
   return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-in fade-in" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-3xl rounded-[4rem] overflow-hidden shadow-2xl flex flex-col animate-in zoom-in-95 max-h-[90vh]">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose}></div>
+      <div className="relative glass-card w-full max-w-4xl rounded-[3rem] overflow-hidden shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95 max-h-[90vh]">
         
-        {/* Header */}
-        <div className="px-12 py-10 flex items-center justify-between bg-white border-b border-red-600/20 shrink-0">
-          <div>
-            <h2 className="text-3xl font-black text-red-100 tracking-tight">
-              {purchase.make} {purchase.model}
-            </h2>
-            <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-2">Détails Complets de l'Achat</p>
+        {/* Modal Header */}
+        <div className="px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-6">
+            <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">🛒</div>
+            <div>
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">
+                {purchase.make} {purchase.model}
+              </h2>
+              <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">Détails de l'Achat</p>
+            </div>
           </div>
-          <button onClick={onClose} className="h-14 w-14 bg-slate-50 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70 transition-all">✕</button>
+          <button onClick={onClose} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="relative z-10 text-white">✕</div>
+          </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 space-y-8">
-          
-          {/* Partner Info */}
-          <div className="bg-blue-50 p-8 rounded-[2.5rem] border border-red-600/30 flex items-center gap-6">
-            <div className="h-24 w-24 rounded-[2rem] bg-white border-2 border-red-600/30 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
-              {partnerPhoto ? (
-                <img src={partnerPhoto} className="w-full h-full object-cover" alt="Partner" />
-              ) : (
-                <span className="text-4xl">👤</span>
-              )}
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">
-                {purchase.clientId ? 'Client Showroom' : 'Partenaire Fournisseur'}
-              </p>
-              <h3 className="text-2xl font-black text-blue-900 tracking-tight">
-                {purchase.clientId ? clientName : supplierName}
-              </h3>
-              {purchase.clientPhone && (
-                <p className="text-sm font-bold text-red-400/60 mt-1">{purchase.clientPhone}</p>
-              ) || (purchase as any).supplier?.mobile && (
-                <p className="text-sm font-bold text-red-400/60 mt-1">{(purchase as any).supplier?.mobile}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Creation Info */}
-          <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
-            <h3 className="text-lg font-black text-red-100 mb-4">📝 Informations d'Enregistrement</h3>
-            <div className="grid grid-cols-2 gap-4">
-              <DetailItem label="Créé par" value={createdBy} icon="👤" />
-              {purchase.created_at && (
-                <DetailItem label="Date d'Ajout" value={new Date(purchase.created_at).toLocaleDateString('fr-FR')} icon="📅" />
-              )}
-            </div>
-          </div>
+        <div className="flex-grow overflow-y-auto custom-scrollbar px-8 py-8 space-y-8 bg-slate-950/20 backdrop-blur-md">
           
           {/* Photos Gallery */}
           {purchase.photo_urls && purchase.photo_urls.length > 0 && (
-            <div>
-              <h3 className="text-lg font-black text-red-100 mb-4">📸 Photos du Véhicule</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {purchase.photo_urls.map((photo, idx) => (
-                  <img key={idx} src={photo} alt={`Photo ${idx + 1}`} className="w-full h-40 object-cover rounded-2xl border border-red-600/30 shadow-sm" />
-                ))}
-              </div>
+            <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
+              {purchase.photo_urls.map((photo, idx) => (
+                <div key={idx} className="h-48 w-72 shrink-0 rounded-[2rem] border-2 border-red-600/30 shadow-xl overflow-hidden">
+                  <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                </div>
+              ))}
             </div>
           )}
 
-          {/* Vehicle Information */}
-          <div>
-            <h3 className="text-lg font-black text-red-100 mb-4">🚗 Informations Véhicule</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <DetailItem label="Marque" value={purchase.make} />
-              <DetailItem label="Modèle" value={purchase.model} />
-              <DetailItem label="Année" value={purchase.year} />
-              <DetailItem label="Couleur" value={purchase.color} />
-              <DetailItem label="Châssis (VIN)" value={purchase.vin} icon="🆔" />
-              <DetailItem label="Immatriculation" value={purchase.plate} icon="🔢" />
-              <DetailItem label="Carburant" value={purchase.fuel === 'essence' ? 'Essence' : 'Diesel'} />
-              <DetailItem label="Transmission" value={purchase.transmission === 'manuelle' ? 'Manuelle' : 'Automatique'} />
-              <DetailItem label="Kilométrage" value={`${purchase.mileage.toLocaleString()} KM`} />
-              <DetailItem label="Portes" value={purchase.doors.toString()} />
-              <DetailItem label="Places" value={purchase.seats.toString()} />
-            </div>
-            {purchase.carInfo && (
-              <div className="mt-6 bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
-                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Informations Complémentaires</p>
-                <p className="text-red-100 font-bold leading-relaxed whitespace-pre-wrap">{purchase.carInfo}</p>
-              </div>
-            )}
-            {purchase.carNotes && (
-              <div className="mt-4 bg-amber-50 p-6 rounded-2xl border border-amber-100">
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Notes Internes</p>
-                <p className="text-amber-800 font-bold italic whitespace-pre-wrap">{purchase.carNotes}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Partner Details */}
-          <div>
-            <h3 className="text-lg font-black text-red-100 mb-4">🤝 Information {purchase.clientId ? 'Client' : 'Fournisseur'}</h3>
-            <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Nom Complet</p>
-                <p className="text-lg font-black text-red-400">{purchase.clientId ? clientName : supplierName}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Téléphone</p>
-                <p className="text-lg font-black text-red-100">{purchase.clientPhone || (purchase as any).supplier?.mobile || 'N/A'}</p>
-              </div>
-            </div>
-          </div>
-
-
-          {/* Purchase Date & Time */}
-          {purchase.purchaseDateTime && (
-            <div>
-              <h3 className="text-lg font-black text-red-100 mb-4">⏰ Date & Heure d'Achat</h3>
-              <div className="bg-red-600/20 p-6 rounded-2xl border border-red-600/30">
-                <p className="text-sm font-bold text-red-400/70 mb-2">Acheté le</p>
-                <p className="text-lg font-black text-red-100">{new Date(purchase.purchaseDateTime).toLocaleDateString('fr-FR')} à {new Date(purchase.purchaseDateTime).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
-              </div>
-            </div>
-          )}
-
-          {/* Financial Information */}
-          <div>
-            <h3 className="text-lg font-black text-red-100 mb-4">💰 Informations Financières</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-amber-50 p-6 rounded-2xl border border-amber-200">
-                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest mb-2">Prix Initial Client</p>
-                <p className="text-2xl font-black text-amber-600">{initialClientPrice.toLocaleString()} <span className="text-xs font-bold text-amber-400">DA</span></p>
-              </div>
-              
-              <div className="bg-red-50 p-6 rounded-2xl border border-red-200">
-                <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2">Coût Total Achat</p>
-                <p className="text-2xl font-black text-red-600">{totalCost.toLocaleString()} <span className="text-xs font-bold text-red-400">DA</span></p>
-              </div>
-              
-              <div className="bg-blue-50 p-6 rounded-2xl border border-blue-200 md:col-span-2">
-                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-2">Prix de Vente Showroom</p>
-                <p className="text-3xl font-black text-red-400">{sellingPrice.toLocaleString()} <span className="text-sm font-bold text-blue-400">DA</span></p>
-              </div>
-
-              <div className={`p-6 rounded-2xl border-2 md:col-span-2 ${profit >= 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {profit >= 0 ? 'Marge Brute Estimée' : 'Déficit Estimé'}
-                </p>
-                <p className={`text-3xl font-black ${profit >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                  {Math.abs(profit).toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span>
-                </p>
-              </div>
-            </div>
-          </div>
-          
-
-          {/* Additional Dates */}
-          <div>
-            <h3 className="text-lg font-black text-red-100 mb-4">📍 Dates Importantes</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <DetailItem 
-                label="Date d'Ajout" 
-                value={purchase.dateAdded ? new Date(purchase.dateAdded).toLocaleDateString('fr-FR') : 'N/A'} 
-                icon="📅"
-              />
-            </div>
-          </div>
-
-          {/* Inspection Checklists */}
-          <div>
-            <h3 className="text-lg font-black text-red-100 mb-4">✓ Contrôle de Qualité</h3>
-            
-            {/* Safety Checklist */}
-            {purchase.safety && Object.keys(purchase.safety).length > 0 && (
-              <div className="mb-6 bg-orange-50 p-6 rounded-2xl border border-orange-200">
-                <p className="text-sm font-black text-orange-700 mb-4">🛡️ Contrôle Sécurité</p>
-                <div className="space-y-2">
-                  {Object.entries(purchase.safety).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
-                        {value ? '✓' : '✕'}
-                      </span>
-                      <span className="text-sm font-bold text-red-100">{key}</span>
-                    </div>
-                  ))}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* Left Side - Info & Partner */}
+            <div className="space-y-8">
+              <Section title="Informations Partenaire" icon="🤝">
+                <div className="bg-red-600/10 p-6 rounded-2xl border border-red-600/20 flex items-center gap-6">
+                  <div className="h-20 w-20 rounded-2xl bg-slate-900 border border-red-600/30 shadow-lg overflow-hidden flex items-center justify-center shrink-0">
+                    {partnerPhoto ? (
+                      <img src={partnerPhoto} className="w-full h-full object-cover" alt="Partner" />
+                    ) : (
+                      <span className="text-3xl opacity-40">👤</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-red-400/60 uppercase tracking-widest mb-1">
+                      {purchase.clientId ? 'Client Showroom' : 'Fournisseur'}
+                    </p>
+                    <h3 className="text-xl font-black text-red-200 tracking-tight">
+                      {purchase.clientId ? clientName : supplierName}
+                    </h3>
+                    <p className="text-xs font-bold text-red-400/50 mt-1">
+                      {purchase.clientPhone || (purchase as any).supplier?.mobile || 'Pas de téléphone'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            )}
-            
-            {/* Equipment Checklist */}
-            {purchase.equipment && Object.keys(purchase.equipment).length > 0 && (
-              <div className="mb-6 bg-blue-50 p-6 rounded-2xl border border-blue-200">
-                <p className="text-sm font-black text-blue-700 mb-4">🧰 Dotation Bord</p>
-                <div className="space-y-2">
-                  {Object.entries(purchase.equipment).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
-                        {value ? '✓' : '✕'}
-                      </span>
-                      <span className="text-sm font-bold text-red-100">{key}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Comfort Checklist */}
-            {purchase.comfort && Object.keys(purchase.comfort).length > 0 && (
-              <div className="mb-6 bg-purple-50 p-6 rounded-2xl border border-purple-200">
-                <p className="text-sm font-black text-purple-700 mb-4">✨ État & Ambiance</p>
-                <div className="space-y-2">
-                  {Object.entries(purchase.comfort).map(([key, value]) => (
-                    <div key={key} className="flex items-center gap-3">
-                      <span className={`text-xl font-black ${value ? 'text-green-600' : 'text-red-600'}`}>
-                        {value ? '✓' : '✕'}
-                      </span>
-                      <span className="text-sm font-bold text-red-100">{key}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+              </Section>
 
-            {/* No inspections message */}
-            {(!purchase.safety || Object.keys(purchase.safety).length === 0) &&
-             (!purchase.equipment || Object.keys(purchase.equipment).length === 0) &&
-             (!purchase.comfort || Object.keys(purchase.comfort).length === 0) && (
-              <div className="bg-red-950/30 p-6 rounded-2xl border border-red-600/30 text-center">
-                <p className="text-sm font-bold text-red-400/70">Aucun contrôle enregistré pour ce véhicule</p>
-              </div>
-            )}
+              <Section title="Détails Véhicule" icon="🚗">
+                <div className="grid grid-cols-2 gap-3">
+                  <DetailItem label="Marque" value={purchase.make} color="red" />
+                  <DetailItem label="Modèle" value={purchase.model} color="red" />
+                  <DetailItem label="Année" value={purchase.year} color="red" />
+                  <DetailItem label="Couleur" value={purchase.color} color="red" />
+                  <DetailItem label="Châssis" value={purchase.vin} icon="🆔" color="red" />
+                  <DetailItem label="Immatriculation" value={purchase.plate} icon="🔢" color="red" />
+                  <DetailItem label="Kilométrage" value={`${purchase.mileage.toLocaleString()} KM`} color="amber" />
+                  <DetailItem label="Énergie" value={purchase.fuel === 'essence' ? 'Essence' : 'Diesel'} color="blue" />
+                </div>
+              </Section>
+
+              {purchase.carInfo && (
+                <Section title="Infos Complémentaires" icon="ℹ️">
+                  <div className="bg-slate-900/50 p-6 rounded-2xl border border-red-600/20">
+                    <p className="text-red-200 font-bold leading-relaxed whitespace-pre-wrap text-sm">{purchase.carInfo}</p>
+                  </div>
+                </Section>
+              )}
+            </div>
+
+            {/* Right Side - Financial & Inspection */}
+            <div className="space-y-8">
+              <Section title="Informations Financières" icon="💰">
+                <div className="space-y-4">
+                  <div className="bg-gradient-to-r from-amber-600/20 to-amber-900/20 p-6 rounded-2xl border border-amber-600/30">
+                    <p className="text-[10px] font-black text-amber-400/70 uppercase tracking-widest mb-2">Prix Initial Client</p>
+                    <p className="text-3xl font-black text-amber-500">{initialClientPrice.toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span></p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-red-600/20 to-red-900/20 p-6 rounded-2xl border border-red-600/30">
+                    <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Coût Total Achat</p>
+                    <p className="text-3xl font-black text-red-400">{totalCost.toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span></p>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-emerald-600/20 to-emerald-900/20 p-6 rounded-2xl border border-emerald-600/30">
+                    <p className="text-[10px] font-black text-emerald-400/70 uppercase tracking-widest mb-2">Prix de Vente</p>
+                    <p className="text-4xl font-black text-emerald-400">{sellingPrice.toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span></p>
+                  </div>
+
+                  <div className={`p-6 rounded-2xl border ${profit >= 0 ? 'bg-emerald-600/10 border-emerald-600/30' : 'bg-rose-600/10 border-rose-600/30'}`}>
+                    <p className={`text-[10px] font-black uppercase tracking-widest mb-2 ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {profit >= 0 ? 'Marge Estimée' : 'Déficit Estimé'}
+                    </p>
+                    <p className={`text-3xl font-black ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {Math.abs(profit).toLocaleString()} <span className="text-sm font-bold opacity-50">DA</span>
+                    </p>
+                  </div>
+                </div>
+              </Section>
+
+              <Section title="Contrôle de Qualité" icon="✓">
+                <div className="space-y-4">
+                  {/* Safety */}
+                  {purchase.safety && Object.keys(purchase.safety).length > 0 && (
+                    <div className="p-5 bg-slate-900/50 rounded-2xl border border-red-600/20">
+                      <p className="text-[10px] font-black text-red-400/60 uppercase tracking-widest mb-4">🛡️ Sécurité</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(purchase.safety).map(([key, value]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <span className={`text-xs ${value ? 'text-emerald-500' : 'text-rose-500'}`}>{value ? '✓' : '✕'}</span>
+                            <span className="text-[11px] font-bold text-red-200">{key}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Equipment */}
+                  {purchase.equipment && Object.keys(purchase.equipment).length > 0 && (
+                    <div className="p-5 bg-slate-900/50 rounded-2xl border border-red-600/20">
+                      <p className="text-[10px] font-black text-red-400/60 uppercase tracking-widest mb-4">🧰 Équipements</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        {Object.entries(purchase.equipment).map(([key, value]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <span className={`text-xs ${value ? 'text-emerald-500' : 'text-rose-500'}`}>{value ? '✓' : '✕'}</span>
+                            <span className="text-[11px] font-bold text-red-200">{key}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* No inspections message */}
+                  {(!purchase.safety || Object.keys(purchase.safety).length === 0) &&
+                   (!purchase.equipment || Object.keys(purchase.equipment).length === 0) && (
+                    <div className="bg-red-950/20 p-6 rounded-2xl border border-red-600/20 text-center">
+                      <p className="text-xs font-bold text-red-400/40 italic">Aucun contrôle enregistré</p>
+                    </div>
+                  )}
+                </div>
+              </Section>
+
+              <Section title="Traçabilité" icon="📍">
+                <div className="grid grid-cols-1 gap-3">
+                  <DetailItem label="Créé par" value={createdBy} icon="👤" color="red" />
+                  <DetailItem label="Date d'Enregistrement" value={purchase.created_at ? new Date(purchase.created_at).toLocaleDateString('fr-FR') : 'N/A'} icon="📅" color="red" />
+                  {purchase.purchaseDateTime && (
+                    <DetailItem label="Date Effective d'Achat" value={new Date(purchase.purchaseDateTime).toLocaleString('fr-FR')} icon="⏰" color="amber" />
+                  )}
+                </div>
+              </Section>
+            </div>
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-12 py-8 bg-slate-50 border-t border-red-600/20 flex justify-end gap-4 shrink-0">
-          <button 
-            onClick={onClose}
-            className="px-10 py-4 rounded-2xl bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest hover:bg-slate-800 transition-all"
-          >
-            Fermer
-          </button>
+        {/* Modal Footer */}
+        <div className="px-8 py-6 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex justify-end shrink-0">
+          <button onClick={onClose} className="px-12 py-3 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-xl hover:bg-slate-900/70 transition-all uppercase tracking-wider text-sm">Fermer</button>
         </div>
       </div>
     </div>
@@ -1566,45 +1427,60 @@ const PurchaseDetailsModal: React.FC<{ purchase: PurchaseRecord; onClose: () => 
 };
 
 // Detail Item Component
-const DetailItem: React.FC<{ label: string; value: string; icon?: string }> = ({ label, value, icon }) => (
-  <div className="bg-red-600/20 p-4 rounded-2xl border border-red-600/30">
-    <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2 flex items-center gap-2">
-      {icon && <span>{icon}</span>}
-      {label}
-    </p>
-    <p className="text-sm font-bold text-red-100 truncate">{value}</p>
-  </div>
-);
+const DetailItem: React.FC<{ label: string; value: string; icon?: string; color?: 'red' | 'blue' | 'rose' | 'amber' | 'emerald' }> = ({ label, value, icon, color = 'red' }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-600/20', border: 'border-red-600/30', label: 'text-red-400/70', value: 'text-red-200' },
+    blue: { bg: 'bg-blue-600/20', border: 'border-blue-600/30', label: 'text-blue-400/70', value: 'text-blue-200' },
+    rose: { bg: 'bg-rose-600/20', border: 'border-rose-600/30', label: 'text-rose-400/70', value: 'text-rose-200' },
+    amber: { bg: 'bg-amber-600/20', border: 'border-amber-600/30', label: 'text-amber-400/70', value: 'text-amber-200' },
+    emerald: { bg: 'bg-emerald-600/20', border: 'border-emerald-600/30', label: 'text-emerald-400/70', value: 'text-emerald-200' }
+  };
+  
+  const colors = colorMap[color] || colorMap.red;
 
-const Field: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; placeholder?: string; emoji?: string }> = ({ label, name, value, onChange, type = 'text', placeholder, emoji = '📝' }) => (
+  return (
+    <div className={`${colors.bg} ${colors.border} p-4 rounded-[1.5rem] border`}>
+      <p className={`text-xs font-black ${colors.label} uppercase tracking-wider flex items-center gap-2`}>
+        {icon && <span>{icon}</span>}
+        {label}
+      </p>
+      <p className={`font-black ${colors.value} mt-2 break-words`}>{value}</p>
+    </div>
+  );
+};
+
+const Field: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; placeholder?: string; emoji?: string; disabled?: boolean }> = ({ label, name, value, onChange, type = 'text', placeholder, emoji, disabled }) => (
   <div className="space-y-2">
-     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2">
-       <span>{emoji}</span> {label}
-     </label>
-      <input 
-        type={type} 
-        name={name} 
-        value={value ?? ''} 
-        onChange={onChange} 
+    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">{label}</label>
+    <div className="relative group/field">
+      {emoji && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-40 group-focus-within/field:opacity-100 transition-all">{emoji}</span>}
+      <input
+        type={type}
+        name={name}
+        value={value ?? ''}
+        onChange={onChange}
+        disabled={disabled}
         placeholder={placeholder}
-        className="w-full bg-white border-2 border-red-600/20 px-8 py-4.5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg" 
+        className={`w-full bg-slate-900/30 border ${emoji ? 'pl-12' : 'px-4'} py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 shadow-sm transition-all text-sm tracking-tight border-red-600/30 placeholder-red-400/40 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
+    </div>
   </div>
 );
 
-const TextAreaField: React.FC<{ label: string; name: string; value: any; onChange: any; placeholder?: string; emoji?: string; minHeight?: string }> = ({ label, name, value, onChange, placeholder, emoji = '📝', minHeight = '100px' }) => (
+const TextAreaField: React.FC<{ label: string; name: string; value: any; onChange: any; placeholder?: string; emoji?: string; minHeight?: string }> = ({ label, name, value, onChange, placeholder, emoji, minHeight = '100px' }) => (
   <div className="space-y-2">
-     <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-3 flex items-center gap-2">
-       <span>{emoji}</span> {label}
-     </label>
-      <textarea 
-        name={name} 
-        value={value ?? ''} 
-        onChange={onChange} 
+    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">{label}</label>
+    <div className="relative group/field">
+      {emoji && <span className="absolute left-4 top-4 text-lg opacity-40 group-focus-within/field:opacity-100 transition-all">{emoji}</span>}
+      <textarea
+        name={name}
+        value={value ?? ''}
+        onChange={onChange}
         placeholder={placeholder}
         style={{ minHeight }}
-        className="w-full bg-white border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg resize-none" 
+        className={`w-full bg-slate-900/30 border ${emoji ? 'pl-12' : 'px-4'} py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 shadow-sm transition-all text-sm tracking-tight border-red-600/30 placeholder-red-400/40 resize-none`}
       />
+    </div>
   </div>
 );
 interface PrintInvoiceModalProps {

@@ -698,20 +698,20 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
           <div className="relative glass-card w-full max-w-4xl rounded-[4rem] shadow-2xl flex flex-col max-h-[95vh] overflow-hidden animate-in zoom-in-95 duration-500 border border-red-600/40">
             
             {/* WIZARD HEADER */}
-            <div className="px-12 py-10 flex items-center justify-between bg-gradient-to-r from-red-900 via-red-800 to-red-950 text-white shrink-0 relative overflow-hidden">
+            <div className="px-12 py-10 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 text-white shrink-0 relative overflow-hidden border-b border-red-600/20">
                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_0%,transparent_50%)]"></div>
                <div className="relative z-10 flex items-center gap-6">
-                <div className="h-16 w-16 rounded-[1.8rem] bg-white/10 backdrop-blur-md flex items-center justify-center text-4xl shadow-xl border border-white/20">
+                <div className="h-16 w-16 rounded-[2rem] bg-red-600/20 backdrop-blur-md flex items-center justify-center text-4xl shadow-xl border border-red-600/30">
                   {wizardStep === 1 ? '👤' : wizardStep === 2 ? '🛡️' : '💰'}
                 </div>
                 <div>
-                  <h2 className="text-4xl font-black tracking-tight uppercase">
+                  <h2 className="text-4xl font-black tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-r from-red-100 to-red-400">
                     {wizardStep === 1 ? 'Client' : wizardStep === 2 ? 'Inspection' : 'Finalisation'}
                   </h2>
-                  <p className="text-red-300 font-bold text-[10px] uppercase tracking-widest mt-1">Étape {wizardStep} sur 3 • {selectedCar?.make} {selectedCar?.model}</p>
+                  <p className="text-red-400 font-bold text-[10px] uppercase tracking-widest mt-1">Étape {wizardStep} sur 3 • {selectedCar?.make} {selectedCar?.model}</p>
                 </div>
               </div>
-              <button onClick={handleWizardClose} className="h-14 w-14 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-2xl transition-all backdrop-blur-md border border-white/20 relative z-10">✕</button>
+              <button onClick={handleWizardClose} className="h-14 w-14 bg-red-600/10 hover:bg-red-600/20 rounded-full flex items-center justify-center text-2xl transition-all backdrop-blur-md border border-red-600/20 relative z-10 text-red-100">✕</button>
             </div>
 
             {/* WIZARD PROGRESS BAR */}
@@ -723,7 +723,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
             </div>
 
             {/* WIZARD CONTENT - SCROLLABLE */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 bg-slate-50/30">
+            <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 bg-slate-950/20">
               
               {/* ========== STEP 1: CLIENT INFORMATION ========== */}
               {wizardStep === 1 && (
@@ -739,7 +739,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
 
                     {/* Client Search */}
                     <div className="mb-12 relative">
-                       <label className="text-[10px] font-black text-red-400 uppercase tracking-widest ml-3 mb-2 block">🔍 Rechercher un client existant (Nom ou Téléphone)</label>
+                       <label className="text-[10px] font-black text-red-400 uppercase tracking-widest ml-3 mb-2 block">🔍 Rechercher un client existant</label>
                        <div className="relative">
                           <input 
                             type="text"
@@ -750,7 +750,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                               setShowClientResults(true);
                             }}
                             onFocus={() => setShowClientResults(true)}
-                            className="w-full bg-white border-2 border-red-600/30 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg"
+                            className="w-full bg-slate-900/50 border-2 border-red-600/20 px-8 py-5 rounded-[2rem] outline-none focus:border-red-600 font-bold text-red-100 shadow-sm transition-all text-lg"
                           />
                           {clientSearchQuery && (
                             <button 
@@ -761,7 +761,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                        </div>
 
                        {showClientResults && clientSearchQuery.length > 1 && (
-                         <div className="absolute z-50 left-0 right-0 mt-4 glass-card rounded-[2.5rem] shadow-2xl border border-red-600/30 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-4 bg-white/95 backdrop-blur-md">
+                         <div className="absolute z-50 left-0 right-0 mt-4 glass-card rounded-[2.5rem] shadow-2xl border border-red-600/30 overflow-hidden max-h-[400px] overflow-y-auto custom-scrollbar animate-in fade-in slide-in-from-top-4 bg-slate-900/95 backdrop-blur-md">
                             {clients.filter(c => 
                               `${c.first_name} ${c.last_name}`.toLowerCase().includes(clientSearchQuery.toLowerCase()) ||
                               c.mobile1?.includes(clientSearchQuery)
@@ -802,16 +802,16 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                                     setClientSearchQuery(`${c.first_name} ${c.last_name}`);
                                     setShowClientResults(false);
                                   }}
-                                  className="w-full p-6 text-left hover:bg-red-50 flex items-center gap-6 transition-all border-b border-red-50 last:border-0"
+                                  className="w-full p-6 text-left hover:bg-red-600/10 flex items-center gap-6 transition-all border-b border-red-600/10 last:border-0"
                                 >
-                                   <div className="h-14 w-14 rounded-2xl bg-red-100 flex items-center justify-center text-2xl overflow-hidden shrink-0">
+                                   <div className="h-14 w-14 rounded-2xl bg-slate-900 border border-red-600/20 flex items-center justify-center text-2xl overflow-hidden shrink-0">
                                       {c.photo_url ? <img src={c.photo_url} className="w-full h-full object-cover" /> : '👤'}
                                    </div>
                                    <div className="flex-1 min-w-0">
                                       <p className="font-black text-red-100 text-lg truncate">{c.first_name} {c.last_name}</p>
-                                      <p className="text-[10px] font-black text-red-600 uppercase tracking-widest mt-1">{c.mobile1} {c.address ? `• ${c.address}` : ''}</p>
+                                      <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">{c.mobile1} {c.address ? `• ${c.address}` : ''}</p>
                                    </div>
-                                   <div className="px-4 py-2 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">SÉLECTIONNER</div>
+                                   <div className="px-4 py-2 bg-red-600/20 text-red-400 border border-red-600/30 rounded-xl text-[10px] font-black uppercase tracking-widest">SÉLECTIONNER</div>
                                 </button>
                               ))
                             )}
@@ -822,7 +822,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                     <div className="flex flex-col lg:flex-row gap-12">
                       <div className="flex flex-col items-center justify-start lg:w-1/4 pt-4">
                          <div className="relative group w-48 h-48">
-                            <div className="w-full h-full rounded-[4.5rem] bg-white border-4 border-red-600/30 shadow-xl flex items-center justify-center text-7xl overflow-hidden group-hover:bg-red-600/20 transition-colors">
+                            <div className="w-full h-full rounded-[4.5rem] bg-slate-900 border-4 border-red-600/30 shadow-xl flex items-center justify-center text-7xl overflow-hidden group-hover:bg-red-600/20 transition-colors">
                                {formData.photo_url ? <img src={formData.photo_url} className="w-full h-full object-cover" /> : '👤'}
                             </div>
                             <label className="absolute bottom-2 right-2 h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center cursor-pointer hover:bg-red-700 shadow-2xl transition-all">
@@ -830,7 +830,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                                <span className="text-2xl">📷</span>
                             </label>
                          </div>
-                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-6 text-center bg-red-100/30 px-4 py-2 rounded-xl">Photo Client</p>
+                         <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-6 text-center bg-red-600/10 px-4 py-2 rounded-xl border border-red-600/20">Photo Client</p>
                       </div>
                       
                       <div className="lg:w-3/4 grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -870,7 +870,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                       </div>
 
                       <div className="lg:w-1/2 flex flex-col gap-6">
-                        <div className="flex-grow border-4 border-dashed border-red-100 glass-card rounded-[3.5rem] p-8 flex flex-col items-center justify-center relative group min-h-[250px] transition-all hover:border-red-400 bg-white/50">
+                        <div className="flex-grow border-4 border-dashed border-red-600/20 glass-card rounded-[3.5rem] p-8 flex flex-col items-center justify-center relative group min-h-[250px] transition-all hover:border-red-600/50 bg-slate-900/50">
                            {formData.scan_url ? <img src={formData.scan_url} className="w-full h-full object-contain rounded-[2rem]" /> : (
                              <div className="text-center opacity-40"><span className="text-6xl mb-4 block">📑</span><p className="text-[10px] font-black uppercase tracking-widest text-red-400/70 mt-4">Scanner ID / Permis</p></div>
                            )}
@@ -898,42 +898,42 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                     </div>
 
                     {/* Safety Checklist */}
-                    <div className="space-y-6 mb-10 pb-10 border-b-2 border-red-100">
+                    <div className="space-y-6 mb-10 pb-10 border-b-2 border-red-600/20">
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">🛡️</span>
-                        <h4 className="text-lg font-black text-red-100 uppercase tracking-wider">Contrôle Sécurité</h4>
+                        <h4 className="text-lg font-black text-red-100 uppercase tracking-widest">Contrôle Sécurité</h4>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {inspectionTemplates.filter(t => t.template_type === 'safety').map(t => (
-                          <label key={t.id} className="flex items-center gap-3 p-4 bg-white rounded-2xl border-2 border-red-50 cursor-pointer hover:bg-red-50 transition-all">
+                          <label key={t.id} className="flex items-center gap-3 p-4 bg-slate-900/40 rounded-2xl border border-red-600/20 cursor-pointer hover:bg-red-600/10 transition-all group">
                             <input
                               type="checkbox"
                               checked={(formData.safety?.[t.item_name] || false) as boolean}
                               onChange={(e) => setFormData({...formData, safety: {...(formData.safety || {}), [t.item_name]: e.target.checked}})}
                               className="w-5 h-5 rounded cursor-pointer accent-red-600"
                             />
-                            <span className="font-black text-red-100">{t.item_name}</span>
+                            <span className="font-black text-red-100 group-hover:text-red-400 transition-colors">{t.item_name}</span>
                           </label>
                         ))}
                       </div>
                     </div>
 
                     {/* Equipment Checklist */}
-                    <div className="space-y-6 mb-10 pb-10 border-b-2 border-red-100">
+                    <div className="space-y-6 mb-10 pb-10 border-b-2 border-red-600/20">
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">⚙️</span>
-                        <h4 className="text-lg font-black text-red-100 uppercase tracking-wider">Équipements</h4>
+                        <h4 className="text-lg font-black text-red-100 uppercase tracking-widest">Équipements</h4>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {inspectionTemplates.filter(t => t.template_type === 'equipment').map(t => (
-                          <label key={t.id} className="flex items-center gap-3 p-4 bg-white rounded-2xl border-2 border-red-50 cursor-pointer hover:bg-red-50 transition-all">
+                          <label key={t.id} className="flex items-center gap-3 p-4 bg-slate-900/40 rounded-2xl border border-red-600/20 cursor-pointer hover:bg-red-600/10 transition-all group">
                             <input
                               type="checkbox"
                               checked={(formData.equipment?.[t.item_name] || false) as boolean}
                               onChange={(e) => setFormData({...formData, equipment: {...(formData.equipment || {}), [t.item_name]: e.target.checked}})}
                               className="w-5 h-5 rounded cursor-pointer accent-red-600"
                             />
-                            <span className="font-black text-red-100">{t.item_name}</span>
+                            <span className="font-black text-red-100 group-hover:text-red-400 transition-colors">{t.item_name}</span>
                           </label>
                         ))}
                       </div>
@@ -943,18 +943,18 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                     <div className="space-y-6">
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">🪑</span>
-                        <h4 className="text-lg font-black text-red-100 uppercase tracking-wider">Confort</h4>
+                        <h4 className="text-lg font-black text-red-100 uppercase tracking-widest">Confort</h4>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {inspectionTemplates.filter(t => t.template_type === 'comfort').map(t => (
-                          <label key={t.id} className="flex items-center gap-3 p-4 bg-white rounded-2xl border-2 border-red-50 cursor-pointer hover:bg-red-50 transition-all">
+                          <label key={t.id} className="flex items-center gap-3 p-4 bg-slate-900/40 rounded-2xl border border-red-600/20 cursor-pointer hover:bg-red-600/10 transition-all group">
                             <input
                               type="checkbox"
                               checked={(formData.comfort?.[t.item_name] || false) as boolean}
                               onChange={(e) => setFormData({...formData, comfort: {...(formData.comfort || {}), [t.item_name]: e.target.checked}})}
                               className="w-5 h-5 rounded cursor-pointer accent-red-600"
                             />
-                            <span className="font-black text-red-100">{t.item_name}</span>
+                            <span className="font-black text-red-100 group-hover:text-red-400 transition-colors">{t.item_name}</span>
                           </label>
                         ))}
                       </div>
@@ -1042,37 +1042,37 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="p-6 bg-white rounded-2xl border-2 border-red-50">
-                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">💵 Prix Total</p>
-                        <div className="relative">
+                      <div className="p-6 bg-slate-900/40 rounded-2xl border border-red-600/20">
+                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-3">💵 Prix Total de Vente</p>
+                        <div className="relative group">
                           <input
                             type="number"
                             value={totalPrice}
                             onChange={(e) => setTotalPrice(Number(e.target.value))}
-                            className="w-full bg-slate-50 border-2 border-red-100 px-4 py-3 rounded-xl outline-none focus:border-red-600 font-black text-2xl text-red-100"
+                            className="w-full bg-slate-950 border-2 border-red-600/10 px-4 py-4 rounded-xl outline-none focus:border-red-600 font-black text-2xl text-red-100 transition-all"
                           />
                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400/70 font-black">DA</span>
                         </div>
                       </div>
-                      <div className="p-6 bg-white rounded-2xl border-2 border-red-50">
-                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">✅ Montant Encaissé</p>
-                        <div className="relative">
+                      <div className="p-6 bg-slate-900/40 rounded-2xl border border-red-600/20">
+                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-3">✅ Montant Déjà Encaissé</p>
+                        <div className="relative group">
                           <input
                             type="number"
                             value={amountPaid}
                             onChange={(e) => setAmountPaid(Number(e.target.value))}
-                            className="w-full bg-slate-50 border-2 border-red-100 px-4 py-3 rounded-xl outline-none focus:border-red-600 font-black text-2xl text-emerald-600"
+                            className="w-full bg-slate-950 border-2 border-red-600/10 px-4 py-4 rounded-xl outline-none focus:border-red-600 font-black text-2xl text-emerald-400 transition-all"
                           />
                           <span className="absolute right-4 top-1/2 -translate-y-1/2 text-red-400/70 font-black">DA</span>
                         </div>
                       </div>
-                      <div className={`md:col-span-2 p-8 rounded-3xl border-4 ${balance > 0 ? 'bg-red-50 border-red-200' : 'bg-emerald-50 border-emerald-200'} transition-all duration-500`}>
-                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">📊 Solde à Percevoir</p>
+                      <div className={`md:col-span-2 p-8 rounded-[2.5rem] border-2 transition-all duration-500 shadow-2xl ${balance > 0 ? 'bg-red-950/40 border-red-600/40' : 'bg-emerald-950/40 border-emerald-600/40'}`}>
+                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-3">📊 Solde Restant à Percevoir</p>
                         <div className="flex justify-between items-center">
-                          <p className={`text-4xl font-black ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                            {balance.toLocaleString()} DA
+                          <p className={`text-5xl font-black tracking-tighter ${balance > 0 ? 'text-red-500' : 'text-emerald-400'}`}>
+                            {balance.toLocaleString()} <span className="text-xl opacity-50">DA</span>
                           </p>
-                          <div className={`h-20 w-20 rounded-[2rem] flex items-center justify-center text-4xl shadow-lg ${balance > 0 ? 'bg-red-600 text-white' : 'bg-emerald-600 text-white animate-bounce'}`}>
+                          <div className={`h-24 w-24 rounded-[2.5rem] flex items-center justify-center text-4xl shadow-xl border ${balance > 0 ? 'bg-red-600/20 border-red-600/40 text-red-500' : 'bg-emerald-600/20 border-emerald-600/40 text-emerald-400 animate-pulse'}`}>
                             {balance > 0 ? '⏳' : '✅'}
                           </div>
                         </div>
@@ -1084,24 +1084,25 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
             </div>
 
             {/* WIZARD FOOTER - BUTTONS */}
-            <div className="px-12 py-8 bg-slate-900 border-t border-red-600/20 flex justify-between items-center shrink-0">
+            <div className="px-12 py-8 bg-gradient-to-r from-red-950/90 to-slate-900/90 border-t border-red-600/20 flex justify-between items-center shrink-0">
               <button
                 onClick={handleWizardPrevious}
                 disabled={wizardStep === 1}
-                className="px-8 py-4 rounded-2xl bg-white/5 border border-red-600/30 text-red-100 font-black text-[10px] uppercase tracking-widest hover:bg-red-600/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                className="px-10 py-4 rounded-xl bg-slate-900/50 border border-red-600/40 text-red-400 font-black text-[10px] uppercase tracking-widest hover:bg-red-600/20 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 ← Précédent
               </button>
 
-              <div className="text-red-400/50 font-black text-[10px] uppercase tracking-[0.3em]">
-                {wizardStep} / 3
+              <div className="text-red-400/50 font-black text-[10px] uppercase tracking-[0.3em] flex items-center gap-2">
+                <span className="h-1.5 w-1.5 rounded-full bg-red-600 animate-pulse"></span>
+                Étape {wizardStep} / 3
               </div>
 
               {wizardStep === 3 ? (
                 <button
                   onClick={handleFinalize}
                   disabled={isSubmitting}
-                  className="group relative px-12 py-4 rounded-2xl overflow-hidden font-black uppercase tracking-widest text-[10px] transition-all duration-300 shadow-xl disabled:opacity-50"
+                  className="group relative px-12 py-4 rounded-xl overflow-hidden font-black uppercase tracking-widest text-[10px] transition-all duration-300 shadow-xl disabled:opacity-50"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-emerald-800 via-emerald-600 to-emerald-800 transition-all duration-300 group-hover:from-emerald-700 group-hover:via-emerald-500 group-hover:to-emerald-700"></div>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
@@ -1112,7 +1113,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
               ) : (
                 <button
                   onClick={handleWizardNext}
-                  className="group relative px-12 py-4 rounded-2xl overflow-hidden font-black uppercase tracking-widest text-[10px] transition-all duration-300 shadow-xl"
+                  className="group relative px-12 py-4 rounded-xl overflow-hidden font-black uppercase tracking-widest text-[10px] transition-all duration-300 shadow-xl"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
@@ -1133,19 +1134,24 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl animate-in fade-in duration-500">
           <div className="relative glass-card w-full max-w-7xl h-[90vh] rounded-[4rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 border border-red-600/40">
             {/* Header */}
-            <div className="px-12 py-10 flex items-center justify-between bg-white border-b border-red-600/20 shrink-0">
+            <div className="px-12 py-10 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/20 shrink-0">
               <div className="flex items-center gap-6">
-                <div className="h-16 w-16 rounded-[1.8rem] bg-red-600 text-white flex items-center justify-center text-4xl shadow-xl">📋</div>
+                <div className="h-16 w-16 rounded-[1.8rem] bg-red-600/30 border border-red-600/40 text-red-100 flex items-center justify-center text-4xl shadow-xl">📋</div>
                 <div>
-                  <h2 className="text-4xl font-black text-red-100 tracking-tight">Historique des Ventes</h2>
+                  <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-500 tracking-tight">Historique des Ventes</h2>
                   <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">Tous les véhicules vendus avec détails complets</p>
                 </div>
               </div>
-              <button onClick={() => setShowSalesHistory(false)} className="h-14 w-14 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70 transition-all">✕</button>
+              <button 
+                onClick={() => setShowSalesHistory(false)} 
+                className="h-14 w-14 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-100 transition-all"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Sales Grid */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 bg-slate-50/30">
+            <div className="flex-grow overflow-y-auto custom-scrollbar px-12 py-10 bg-slate-950/20">
               {/* Search and Filters */}
               <div className="mb-10 flex flex-col md:flex-row gap-6 items-center">
                 <div className="relative flex-1 group">
@@ -1154,13 +1160,13 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                     placeholder="🔍 Rechercher par voiture, client..."
                     value={salesSearchQuery}
                     onChange={(e) => setSalesSearchQuery(e.target.value)}
-                    className="w-full px-8 py-4 rounded-[2rem] border border-red-600/40 bg-white text-red-100 placeholder-red-400/50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-all backdrop-blur-sm font-black"
+                    className="w-full px-8 py-4 rounded-[2rem] border border-red-600/30 bg-slate-900/40 text-red-100 placeholder-red-900/40 focus:outline-none focus:ring-2 focus:ring-red-600 transition-all backdrop-blur-sm font-black"
                   />
                 </div>
-                <div className="flex gap-2 p-1.5 bg-red-950/30 rounded-2xl border border-red-600/30">
-                  <button onClick={() => setSalesDebtFilter('all')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'all' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>Tous</button>
-                  <button onClick={() => setSalesDebtFilter('completed')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'completed' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>Complétées</button>
-                  <button onClick={() => setSalesDebtFilter('debts')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'debts' ? 'bg-white text-red-400 shadow-sm' : 'text-red-400/70'}`}>Dettes</button>
+                <div className="flex gap-2 p-1.5 bg-red-950/40 rounded-2xl border border-red-600/30">
+                  <button onClick={() => setSalesDebtFilter('all')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'all' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-red-400/50 hover:text-red-400'}`}>Tous</button>
+                  <button onClick={() => setSalesDebtFilter('completed')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'completed' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-red-400/50 hover:text-red-400'}`}>Complétées</button>
+                  <button onClick={() => setSalesDebtFilter('debts')} className={`px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all ${salesDebtFilter === 'debts' ? 'bg-red-600 text-white shadow-lg shadow-red-600/20' : 'text-red-400/50 hover:text-red-400'}`}>Dettes</button>
                 </div>
               </div>
 
@@ -1261,10 +1267,10 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-12 py-8 bg-white border-t border-red-600/20 flex justify-end shrink-0">
+            <div className="px-12 py-8 bg-gradient-to-r from-red-950/90 to-slate-900/90 border-t border-red-600/20 flex justify-end shrink-0">
               <button 
                 onClick={() => setShowSalesHistory(false)} 
-                className="px-12 py-4 rounded-2xl bg-red-950/30 text-red-400 font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all"
+                className="px-12 py-4 rounded-2xl bg-slate-900/50 border border-red-600/40 text-red-400 font-black uppercase text-xs tracking-widest hover:bg-slate-900/80 transition-all"
               >
                 Fermer l'Historique
               </button>
@@ -1272,53 +1278,52 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
           </div>
         </div>
       )}
-
-        {/* DEBT PAYMENT MODAL */}
+      {/* DEBT PAYMENT MODAL */}
       {paymentModal.sale && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-          <div className="relative glass-card w-full max-w-md sm:max-w-lg rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-md animate-in fade-in">
+          <div className="relative glass-card w-full max-w-md sm:max-w-lg rounded-[3rem] shadow-2xl overflow-hidden animate-in zoom-in-95 max-h-[90vh] overflow-y-auto border border-red-600/40">
             {/* Header */}
-            <div className="sticky top-0 px-4 sm:px-8 py-4 sm:py-6 bg-gradient-to-r from-red-800 to-red-600 text-white shrink-0 relative overflow-hidden">
+            <div className="sticky top-0 px-8 py-6 bg-gradient-to-r from-red-950/90 to-slate-900/90 text-white shrink-0 relative overflow-hidden border-b border-red-600/20">
               <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_0%,transparent_50%)]"></div>
-              <h2 className="text-2xl sm:text-3xl font-black relative z-10">💳 Paiement</h2>
-              <p className="text-red-100 font-bold text-[11px] sm:text-xs mt-1 relative z-10">Enregistrer un versement</p>
+              <h2 className="text-2xl sm:text-3xl font-black relative z-10 text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-500">💳 Paiement</h2>
+              <p className="text-red-400 font-bold text-[11px] sm:text-xs mt-1 relative z-10 uppercase tracking-widest">Enregistrer un versement</p>
             </div>
 
             {/* Content */}
-            <div className="px-4 sm:px-8 py-4 sm:py-6 space-y-4 sm:space-y-5">
+            <div className="px-8 py-6 space-y-6 bg-slate-950/20">
               {/* Sale Summary - Compact */}
-              <div className="bg-slate-50 rounded-xl sm:rounded-2xl p-4 space-y-2">
-                <div className="text-[11px] sm:text-xs font-black text-red-400/70 uppercase tracking-wider mb-2">📋 Résumé</div>
-                <div className="space-y-1.5 text-xs sm:text-sm">
+              <div className="bg-slate-900/50 rounded-[2rem] p-6 border border-red-600/20 space-y-4">
+                <div className="text-[11px] sm:text-xs font-black text-red-400/70 uppercase tracking-widest mb-2 border-b border-red-600/10 pb-2">📋 Résumé de la Vente</div>
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-red-400/70 font-bold">Véhicule:</span>
-                    <span className="font-black text-red-100 text-right text-[10px] sm:text-sm">{paymentModal.sale.car?.make} {paymentModal.sale.car?.model}</span>
+                    <span className="text-red-400/70 font-bold uppercase text-[10px]">Véhicule</span>
+                    <span className="font-black text-red-100">{paymentModal.sale.car?.make} {paymentModal.sale.car?.model}</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-red-400/70 font-bold">Client:</span>
-                    <span className="font-black text-red-100 text-right text-[10px] sm:text-sm">{paymentModal.sale.last_name} {paymentModal.sale.first_name}</span>
+                    <span className="text-red-400/70 font-bold uppercase text-[10px]">Client</span>
+                    <span className="font-black text-red-100">{paymentModal.sale.last_name} {paymentModal.sale.first_name}</span>
                   </div>
-                  <div className="border-t border-red-600/30 pt-2 mt-2 flex justify-between">
-                    <span className="text-red-400/70 font-bold">Total:</span>
-                    <span className="font-black text-red-400">{paymentModal.sale.total_price.toLocaleString()} DA</span>
+                  <div className="border-t border-red-600/10 pt-3 mt-3 flex justify-between">
+                    <span className="text-red-400/70 font-bold uppercase text-[10px]">Total</span>
+                    <span className="font-black text-red-100">{paymentModal.sale.total_price.toLocaleString()} DA</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-red-400/70 font-bold">Payé:</span>
-                    <span className="font-black text-green-600">{paymentModal.sale.amount_paid.toLocaleString()} DA</span>
+                    <span className="text-red-400/70 font-bold uppercase text-[10px]">Déjà Payé</span>
+                    <span className="font-black text-emerald-400">{paymentModal.sale.amount_paid.toLocaleString()} DA</span>
                   </div>
-                  <div className="flex justify-between bg-red-50 p-2 rounded-lg mt-1">
-                    <span className="text-red-700 font-black text-xs">Solde:</span>
-                    <span className="font-black text-red-600">{paymentModal.sale.balance.toLocaleString()} DA</span>
+                  <div className="flex justify-between bg-red-600/10 p-3 rounded-xl border border-red-600/20">
+                    <span className="text-red-400 font-black text-xs uppercase">Solde Actuel</span>
+                    <span className="font-black text-red-500">{paymentModal.sale.balance.toLocaleString()} DA</span>
                   </div>
                 </div>
               </div>
 
               {/* Payment Input */}
-              <div className="space-y-2">
-                <label className="block font-black text-red-100 text-xs sm:text-sm">
-                  💰 Montant à Payer
+              <div className="space-y-3">
+                <label className="block font-black text-red-400/70 uppercase tracking-widest text-[10px] ml-4">
+                  💰 Montant du Versement
                 </label>
-                <div className="relative">
+                <div className="relative group">
                   <input
                     type="number"
                     min="0"
@@ -1328,39 +1333,39 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                       ...prev, 
                       paymentAmount: Math.min(Number(e.target.value), paymentModal.sale?.balance || 0) 
                     }))}
-                    className="w-full px-4 sm:px-5 py-3 text-sm sm:text-base font-black border-2 border-orange-300 rounded-xl sm:rounded-2xl focus:outline-none focus:border-orange-600 focus:ring-4 focus:ring-orange-100"
+                    className="w-full px-6 py-5 text-lg font-black bg-slate-900/50 border-2 border-red-600/20 rounded-[1.5rem] focus:outline-none focus:border-red-600 text-red-100 transition-all"
                     placeholder="Montant"
                   />
-                  <span className="absolute right-4 top-1/2 transform -translate-y-1/2 text-red-400/70 font-black text-xs sm:text-sm">DA</span>
+                  <span className="absolute right-6 top-1/2 transform -translate-y-1/2 text-red-400/70 font-black text-sm">DA</span>
                 </div>
-                <p className="text-[9px] sm:text-[10px] text-red-400/70 font-bold">
-                  Max: {paymentModal.sale.balance.toLocaleString()} DA
+                <p className="text-[10px] text-red-400/50 font-black uppercase tracking-widest ml-4">
+                  Maximum autorisé: {paymentModal.sale.balance.toLocaleString()} DA
                 </p>
               </div>
 
               {/* Balance Preview - Compact */}
-              <div className={`rounded-xl sm:rounded-2xl p-3 sm:p-4 ${
+              <div className={`rounded-[2rem] p-6 border transition-all ${
                 (paymentModal.sale.balance - paymentModal.paymentAmount) <= 0 
-                  ? 'bg-green-50 border border-green-200' 
-                  : 'bg-orange-50 border border-orange-200'
+                  ? 'bg-emerald-600/10 border-emerald-600/30' 
+                  : 'bg-red-600/10 border-red-600/30'
               }`}>
-                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-wider mb-2">Après Paiement</p>
-                <div className="space-y-1">
+                <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-3 border-b border-red-600/10 pb-2">Projection après paiement</p>
+                <div className="space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="font-bold text-red-100">Nouveau Payé:</span>
-                    <span className="font-black text-green-600">{(paymentModal.sale.amount_paid + paymentModal.paymentAmount).toLocaleString()} DA</span>
+                    <span className="font-bold text-red-100">Nouveau Cumul Payé:</span>
+                    <span className="font-black text-emerald-400">{(paymentModal.sale.amount_paid + paymentModal.paymentAmount).toLocaleString()} DA</span>
                   </div>
-                  <div className="flex justify-between font-black text-xs sm:text-sm">
-                    <span>Nouveau Solde:</span>
+                  <div className="flex justify-between font-black text-base">
+                    <span className="text-red-100 uppercase text-xs">Nouveau Solde Restant:</span>
                     <span className={`${
                       (paymentModal.sale.balance - paymentModal.paymentAmount) <= 0 
-                        ? 'text-green-700' 
-                        : 'text-orange-700'
+                        ? 'text-emerald-400' 
+                        : 'text-red-500'
                     }`}>{Math.max(0, paymentModal.sale.balance - paymentModal.paymentAmount).toLocaleString()} DA</span>
                   </div>
                   {(paymentModal.sale.balance - paymentModal.paymentAmount) <= 0 && (
-                    <div className="mt-2 px-3 py-1.5 bg-green-200 rounded text-green-800 font-black text-[9px] text-center">
-                      ✨ COMPLÈTE ET PAYÉE
+                    <div className="mt-3 px-4 py-2 bg-emerald-600/20 border border-emerald-600/30 rounded-xl text-emerald-400 font-black text-[10px] uppercase tracking-widest text-center shadow-lg animate-pulse">
+                      ✨ VENTE COMPLÈTE ET PAYÉE
                     </div>
                   )}
                 </div>
@@ -1368,36 +1373,35 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
             </div>
 
             {/* Actions */}
-            <div className="px-4 sm:px-8 py-4 sm:py-5 bg-slate-50 border-t border-red-600/20 flex gap-3 justify-end shrink-0">
+            <div className="px-8 py-6 bg-gradient-to-r from-red-950/90 to-slate-900/90 border-t border-red-600/20 flex gap-4 justify-end shrink-0">
               <button
                 onClick={() => setPaymentModal({ sale: null, paymentAmount: 0 })}
                 disabled={isProcessingPayment}
-                className="px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-2xl border border-red-600/40 text-red-100 font-black text-[11px] sm:text-xs uppercase tracking-wide hover:bg-red-950/30 transition-all disabled:opacity-50"
+                className="px-8 py-4 rounded-xl border border-red-600/40 bg-slate-900/50 text-red-400 font-black text-[10px] uppercase tracking-widest hover:bg-slate-900/80 transition-all disabled:opacity-50"
               >
                 Annuler
               </button>
               <button
                 onClick={handleSavePayment}
                 disabled={isProcessingPayment || paymentModal.paymentAmount <= 0}
-                className="group relative px-4 sm:px-8 py-2.5 sm:py-4 rounded-xl overflow-hidden font-black text-[11px] sm:text-xs uppercase tracking-widest transition-all duration-300 shadow-xl disabled:opacity-50"
+                className="group relative px-10 py-4 rounded-xl overflow-hidden font-black text-[10px] uppercase tracking-widest transition-all duration-300 shadow-xl disabled:opacity-50"
               >
                 <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
                 <span className="relative z-10 text-white flex items-center gap-2">
-                  {isProcessingPayment ? '⏳' : '✅'} {isProcessingPayment ? 'Traitement...' : 'Enregistrer'}
+                  {isProcessingPayment ? '⏳' : '✅'} {isProcessingPayment ? 'Validation...' : 'Confirmer'}
                 </span>
               </button>
             </div>
           </div>
         </div>
       )}
-
       {/* PREMIUM PRINT PREVIEW */}
       {printingRecord && (
         <div className="fixed inset-0 z-[250] bg-red-950/30 flex flex-col overflow-hidden animate-in fade-in">
-           <div className="p-4 border-b border-red-600/30 bg-white flex justify-between items-center shadow-sm z-10 print:hidden">
+           <div className="p-4 border-b border-red-600/30 bg-gradient-to-r from-red-950/90 to-slate-900/90 flex justify-between items-center shadow-sm z-10 print:hidden">
              <div className="flex items-center gap-4">
-               <div className="h-10 w-10 rounded-xl bg-blue-50 text-red-400 flex items-center justify-center text-xl">📄</div>
+               <div className="h-10 w-10 rounded-xl bg-slate-900/50 border border-red-600/30 text-red-400 flex items-center justify-center text-xl">📄</div>
                <div>
                  <h3 className="font-black text-red-100 tracking-tight">Aperçu Avant Impression</h3>
                  <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">
@@ -1406,7 +1410,7 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                </div>
              </div>
              <div className="flex items-center gap-4">
-               <button onClick={() => { setPrintingRecord(null); setPrintType(null); }} className="px-6 py-3 rounded-xl bg-red-950/30 text-red-400/70 font-black uppercase text-xs tracking-widest hover:bg-slate-200 transition-all">Fermer</button>
+               <button onClick={() => { setPrintingRecord(null); setPrintType(null); }} className="px-6 py-3 rounded-xl bg-red-950/30 text-red-400 font-black uppercase text-xs tracking-widest hover:bg-slate-900/70 transition-all border border-red-600/30">Fermer</button>
                <button onClick={() => window.print()} className="custom-gradient-btn px-8 py-3 rounded-xl text-white font-black uppercase text-xs tracking-widest shadow-lg flex items-center gap-2"><span>🖨️</span> Imprimer</button>
              </div>
            </div>
@@ -1532,22 +1536,27 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
       {/* SALE DETAILS MODAL - ALL INFORMATIONS - REDESIGNED */}
       {selectedSaleForDetails && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl animate-in fade-in">
-          <div className="relative bg-slate-50 w-full max-w-6xl h-[95vh] rounded-[4rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 border-4 border-red-600/30">
+          <div className="relative glass-card w-full max-w-6xl h-[95vh] rounded-[4rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 border-4 border-red-600/30">
             {/* Header - REDESIGNED with Premium Red Theme */}
-            <div className="px-12 py-10 flex items-center justify-between bg-gradient-to-r from-red-900 via-red-800 to-red-950 text-white shrink-0 shadow-lg relative overflow-hidden border-b border-red-600/40">
+            <div className="px-12 py-10 flex items-center justify-between bg-gradient-to-r from-red-950 via-red-900 to-black text-white shrink-0 shadow-lg relative overflow-hidden border-b border-red-600/40">
                <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05)_0%,transparent_50%)]"></div>
                <div className="flex items-center gap-8 relative z-10">
-                  <div className="h-20 w-20 rounded-[2.2rem] bg-white text-red-400 flex items-center justify-center text-5xl shadow-2xl">🚗</div>
+                  <div className="h-20 w-20 rounded-[2.2rem] bg-red-600/30 border border-red-600/40 text-red-100 flex items-center justify-center text-5xl shadow-2xl">🚗</div>
                   <div>
-                    <h2 className="text-4xl font-black tracking-tight">Dossier de Vente</h2>
-                    <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.3em] mt-2">Référence: #VNT-{selectedSaleForDetails.id?.slice(0,8).toUpperCase()} • {new Date(selectedSaleForDetails.created_at).toLocaleDateString()}</p>
+                    <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-500 tracking-tight">Dossier de Vente</h2>
+                    <p className="text-[10px] font-black text-red-400/70 uppercase tracking-[0.3em] mt-2">Référence: #VNT-{selectedSaleForDetails.id?.slice(0,8).toUpperCase()} • {new Date(selectedSaleForDetails.created_at).toLocaleDateString()}</p>
                   </div>
                </div>
-               <button onClick={() => setSelectedSaleForDetails(null)} className="h-16 w-16 bg-red-600/20 hover:bg-red-600/40 rounded-full flex items-center justify-center text-3xl text-white transition-all backdrop-blur-md relative z-10 border border-red-600/30/30">✕</button>
+               <button 
+                onClick={() => setSelectedSaleForDetails(null)} 
+                className="h-16 w-16 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-3xl text-red-100 transition-all backdrop-blur-md relative z-10"
+               >
+                ✕
+               </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar p-12 bg-slate-50/50">
+            <div className="flex-grow overflow-y-auto custom-scrollbar p-12 bg-slate-950/20">
                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                   
                   {/* Left Column: Car & Images */}
@@ -1623,8 +1632,8 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                            <h3 className="text-2xl font-black text-red-100">Informations Client</h3>
                         </div>
                         
-                        <div className="flex items-center gap-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-50">
-                           <div className="h-32 w-32 rounded-[3rem] bg-white border-4 border-red-600/30 shadow-xl overflow-hidden shrink-0 flex items-center justify-center text-6xl">
+                        <div className="flex items-center gap-8 bg-slate-900/40 p-8 rounded-[2.5rem] border border-red-600/20">
+                           <div className="h-32 w-32 rounded-[3rem] bg-slate-900 border-4 border-red-600/30 shadow-xl overflow-hidden shrink-0 flex items-center justify-center text-6xl">
                               {selectedSaleForDetails.photo_url ? (
                                 <img src={selectedSaleForDetails.photo_url} className="w-full h-full object-cover" alt="Client" />
                               ) : (
@@ -1634,8 +1643,8 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                            <div>
                               <p className="text-3xl font-black text-red-100 leading-none mb-3 tracking-tight">{selectedSaleForDetails.first_name} {selectedSaleForDetails.last_name}</p>
                               <div className="flex gap-3">
-                              <span className="px-4 py-1.5 bg-red-100 text-red-600 rounded-full text-[9px] font-black uppercase tracking-widest">{selectedSaleForDetails.profession || 'Profession non renseignée'}</span>
-                              <span className="px-4 py-1.5 bg-emerald-100 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-widest">Client Enregistré</span>
+                              <span className="px-4 py-1.5 bg-red-600/20 text-red-400 rounded-full text-[9px] font-black uppercase tracking-widest border border-red-600/30">{selectedSaleForDetails.profession || 'Profession non renseignée'}</span>
+                              <span className="px-4 py-1.5 bg-emerald-600/20 text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-600/30">Client Enregistré</span>
                               </div>
                            </div>
                         </div>
@@ -1690,10 +1699,10 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
                            </div>
                            
                            {selectedSaleForDetails.signature_url && (
-                              <div className="bg-white p-8 rounded-[3rem] border border-red-600/30 shadow-xl">
+                              <div className="bg-slate-900 p-8 rounded-[3rem] border border-red-600/30 shadow-xl">
                                  <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-4">Signature Digitale de l'Acquéreur</p>
-                                 <div className="h-32 bg-slate-50 rounded-2xl border-2 border-dashed border-red-600/20 flex items-center justify-center p-6">
-                                    <img src={selectedSaleForDetails.signature_url} className="h-full object-contain mix-blend-multiply" alt="Signature" />
+                                 <div className="h-32 bg-white/5 rounded-2xl border-2 border-dashed border-red-600/20 flex items-center justify-center p-6">
+                                    <img src={selectedSaleForDetails.signature_url} className="h-full object-contain brightness-0 invert" alt="Signature" />
                                  </div>
                               </div>
                            )}
@@ -1704,20 +1713,20 @@ export const POS: React.FC<POSProps> = ({ lang, userName }) => {
             </div>
 
             {/* Footer Actions - REDESIGNED */}
-            <div className="px-12 py-10 bg-white border-t border-red-600/20 flex justify-between items-center shrink-0">
+            <div className="px-12 py-10 bg-gradient-to-r from-red-950 via-red-900 to-black border-t border-red-600/20 flex justify-between items-center shrink-0">
                <div className="flex items-center gap-8">
                   <div className="flex -space-x-5">
-                     {[1,2,3].map(i => <div key={i} className="h-12 w-12 rounded-full border-4 border-red-600/30 bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xl shadow-md">🛡️</div>)}
+                     {[1,2,3].map(i => <div key={i} className="h-12 w-12 rounded-full border-4 border-red-600/30 bg-slate-900 flex items-center justify-center text-xl shadow-md">🛡️</div>)}
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest leading-none">Vérification de Conformité</p>
-                    <p className="text-xs font-black text-red-100 mt-1">Dossier Certifié conforme par l'Administration</p>
+                    <p className="text-xs font-black text-red-200 mt-1">Dossier Certifié conforme par l'Administration</p>
                   </div>
                </div>
                <div className="flex gap-4">
                   <button 
                     onClick={() => { setPrintingRecord(selectedSaleForDetails); setPrintType('sale'); }} 
-                    className="px-10 py-4 rounded-xl bg-red-950/30 text-red-400 font-black uppercase text-[10px] tracking-widest hover:bg-red-600/20 transition-all border border-red-600/30"
+                    className="px-10 py-4 rounded-xl bg-slate-900/50 text-red-400 font-black uppercase text-[10px] tracking-widest hover:bg-red-600/20 transition-all border border-red-600/30"
                   >
                     🖨️ Facture A4
                   </button>
@@ -1756,23 +1765,40 @@ const DetailItem: React.FC<{ label: string; value: any; large?: boolean }> = ({ 
 // --- Sub-composants Helper ---
 const Card: React.FC<{ title: string; icon: string; children: React.ReactNode }> = ({ title, icon, children }) => (
   <div className="glass-card rounded-[4.5rem] border border-red-600/20 p-12 md:p-16 shadow-sm space-y-12">
-    <div className="flex items-center gap-6 border-b border-slate-50 pb-10"><div className="h-20 w-20 rounded-[2.2rem] bg-slate-900 text-white flex items-center justify-center text-4xl shadow-2xl">{icon}</div><h4 className="text-3xl font-black text-red-100 tracking-tighter">{title}</h4></div>
+    <div className="flex items-center gap-6 border-b border-red-600/20 pb-10">
+      <div className="h-20 w-20 rounded-[2.2rem] bg-slate-900 text-white flex items-center justify-center text-4xl shadow-2xl">{icon}</div>
+      <h4 className="text-3xl font-black text-red-100 tracking-tighter">{title}</h4>
+    </div>
     <div>{children}</div>
   </div>
 );
+
 const FlowInput: React.FC<{ label: string; name: string; value: any; onChange: any; type?: string; required?: boolean; placeholder?: string; icon?: string; options?: {v:string, l:string}[] }> = ({ label, name, value, onChange, type = 'text', required, placeholder, icon, options }) => (
   <div className="space-y-4">
     <label className="block text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-5">{label}</label>
     <div className="relative group/field">
       {icon && <span className="absolute left-8 top-1/2 -translate-y-1/2 text-2xl opacity-10 group-focus-within/field:opacity-100 transition-all">{icon}</span>}
       {type === 'select' ? (
-        <select name={name} value={value} onChange={onChange} className={`w-full bg-slate-50 border-2 border-red-600/20 ${icon ? 'pl-20' : 'px-10'} py-6 rounded-[2.2rem] outline-none focus:border-red-600 font-black text-red-100 transition-all appearance-none shadow-inner text-xl tracking-tight`}>
-          {options?.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+        <select 
+          name={name} 
+          value={value} 
+          onChange={onChange} 
+          className={`w-full bg-slate-900/30 border-2 border-red-600/20 ${icon ? 'pl-20' : 'px-10'} py-6 rounded-[2.2rem] outline-none focus:border-red-600 font-black text-red-100 transition-all appearance-none shadow-inner text-xl tracking-tight`}
+        >
+          {options?.map(o => <option key={o.v} value={o.v} className="bg-slate-950">{o.l}</option>)}
         </select>
       ) : (
-        <input type={type} name={name} value={value} onChange={onChange} required={required} placeholder={placeholder} className={`w-full bg-slate-50 border-2 border-red-600/20 ${icon ? 'pl-20' : 'px-10'} py-6 rounded-[2.2rem] outline-none focus:border-red-600 transition-all font-black text-red-100 shadow-inner text-xl tracking-tight`} />
+        <input 
+          type={type} 
+          name={name} 
+          value={value} 
+          onChange={onChange} 
+          required={required} 
+          placeholder={placeholder} 
+          className={`w-full bg-slate-900/30 border-2 border-red-600/20 ${icon ? 'pl-20' : 'px-10'} py-6 rounded-[2.2rem] outline-none focus:border-red-600 transition-all font-black text-red-100 shadow-inner text-xl tracking-tight placeholder:text-red-900/40`} 
+        />
       )}
-      {type === 'select' && <span className="absolute right-10 top-1/2 -translate-y-1/2 pointer-events-none text-slate-300">▼</span>}
+      {type === 'select' && <span className="absolute right-10 top-1/2 -translate-y-1/2 pointer-events-none text-red-400/50">▼</span>}
     </div>
   </div>
 );
@@ -1784,17 +1810,17 @@ const FormField: React.FC<{ label: string; name: string; emoji: string; value: a
       <span>{emoji}</span>
       {label}
     </label>
-    <div className="relative">
+    <div className="relative group/field">
       {type === 'select' ? (
         <select 
           name={name} 
           value={value || ''} 
           onChange={onChange} 
           required={required}
-          className="w-full bg-white border-2 border-red-600/30 px-6 py-4 rounded-[2rem] outline-none focus:border-red-600 focus:ring-4 focus:ring-blue-100 font-black text-red-100 transition-all appearance-none shadow-sm text-lg"
+          className="w-full bg-slate-900/30 border-2 border-red-600/20 px-6 py-4 rounded-[2rem] outline-none focus:border-red-600 font-black text-red-100 transition-all appearance-none shadow-sm text-lg"
         >
-          <option value="">Sélectionner...</option>
-          {options?.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+          <option value="" className="bg-slate-950">Sélectionner...</option>
+          {options?.map(o => <option key={o.v} value={o.v} className="bg-slate-950">{o.l}</option>)}
         </select>
       ) : (
         <input 
@@ -1804,7 +1830,7 @@ const FormField: React.FC<{ label: string; name: string; emoji: string; value: a
           onChange={onChange} 
           required={required} 
           placeholder={placeholder}
-          className="w-full bg-white border-2 border-red-600/30 px-6 py-4 rounded-[2rem] outline-none focus:border-red-600 focus:ring-4 focus:ring-blue-100 transition-all font-black text-red-100 shadow-sm text-lg"
+          className="w-full bg-slate-900/30 border-2 border-red-600/20 px-6 py-4 rounded-[2rem] outline-none focus:border-red-600 transition-all font-black text-red-100 shadow-sm text-lg placeholder:text-red-900/40"
         />
       )}
       {type === 'select' && <span className="absolute right-6 top-1/2 -translate-y-1/2 pointer-events-none text-red-400/70 font-black">▼</span>}

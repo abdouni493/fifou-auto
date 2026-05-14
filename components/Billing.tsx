@@ -50,7 +50,17 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
     fetchHistory();
     fetchInventory();
     fetchShowroom();
+    fetchInspections();
   }, []);
+
+  const fetchInspections = async () => {
+    try {
+      const { data } = await supabase.from('inspections').select('*');
+      if (data) setAllInspections(data);
+    } catch (err) {
+      console.error('Fetch Inspections Error:', err);
+    }
+  };
 
   const fetchShowroom = async () => {
     const { data } = await supabase.from('showroom_config').select('*').eq('id', 1).maybeSingle();
@@ -83,23 +93,34 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
     setLoading(true);
     try {
       const [salesRes, purchasesRes] = await Promise.all([
-        supabase.from('sales').select('*').order('created_at', { ascending: false }),
-        supabase.from('purchases').select('*').order('created_at', { ascending: false })
+        supabase.from('sales').select('*').order('created_at', { ascending: false }).limit(1000),
+        supabase.from('purchases').select('*').order('created_at', { ascending: false }).limit(1000)
       ]);
 
-      const salesData = (salesRes.data || []).map(s => ({
-        ...s,
-        type: 'sale',
-        ref: `VNT-${s.id.slice(0, 8).toUpperCase()}`,
-        date: new Date(s.created_at).toLocaleDateString('fr-FR'),
-        partner: `${s.first_name} ${s.last_name}`,
-        amount: s.total_price,
-        paid: s.amount_paid,
-        balance: s.balance,
-        car: s.car_id,
-        isImpaye: (s.balance || 0) > 0,
-        raw: s
-      }));
+      if (salesRes.error) {
+        console.error('Sales Fetch Error:', salesRes.error, 'Message:', salesRes.error?.message);
+      }
+      if (purchasesRes.error) {
+        console.error('Purchases Fetch Error:', purchasesRes.error, 'Message:', purchasesRes.error?.message);
+      }
+
+      const salesData = (salesRes.data || []).map(s => {
+        const balance = parseFloat(s.balance) || (parseFloat(s.total_price) - parseFloat(s.amount_paid) || 0);
+        const paidAmount = parseFloat(s.amount_paid) || 0;
+        return {
+          ...s,
+          type: 'sale',
+          ref: `VNT-${s.id.slice(0, 8).toUpperCase()}`,
+          date: new Date(s.created_at).toLocaleDateString('fr-FR'),
+          partner: `${s.first_name} ${s.last_name}`,
+          amount: parseFloat(s.total_price) || 0,
+          paid: paidAmount,
+          balance: balance,
+          car: s.car_id,
+          isImpaye: balance > 0,
+          raw: s
+        };
+      });
 
       const purchases = (purchasesRes.data || []).map(p => ({
         ...p,
@@ -107,14 +128,17 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
         ref: `ACH-${p.id.slice(0, 8).toUpperCase()}`,
         date: new Date(p.created_at).toLocaleDateString('fr-FR'),
         partner: p.supplier_name || 'Supplier',
-        amount: p.total_cost,
-        paid: p.total_cost,
+        amount: parseFloat(p.total_cost) || 0,
+        paid: parseFloat(p.total_cost) || 0,
         balance: 0,
         car: `${p.make} ${p.model}`,
         isImpaye: false,
         raw: p
       }));
 
+      console.log('Sales Loaded:', salesData);
+      console.log('Purchases Loaded:', purchases);
+      
       setSales(salesData);
       setHistory([...salesData, ...purchases].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     } catch (err) {
@@ -147,9 +171,19 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
 
   const stats = useMemo(() => {
     const salesOnly = history.filter(h => h.type === 'sale');
+    const revenue = salesOnly.reduce((acc, s) => {
+      const paidAmount = parseFloat(s.paid) || 0;
+      return acc + paidAmount;
+    }, 0);
+    
+    const debts = salesOnly.reduce((acc, s) => {
+      const balance = parseFloat(s.balance) || 0;
+      return acc + balance;
+    }, 0);
+    
     return {
-      revenue: salesOnly.reduce((acc, s) => acc + (s.paid || 0), 0),
-      debts: salesOnly.reduce((acc, s) => acc + (s.balance || 0), 0),
+      revenue: isNaN(revenue) ? 0 : revenue,
+      debts: isNaN(debts) ? 0 : debts,
       count: salesOnly.length
     };
   }, [history]);
@@ -349,14 +383,14 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                        </p>
                     </td>
                     <td className="px-8 py-8 text-right font-black text-red-100">
-                       {item.amount ? `${item.amount.toLocaleString()} DA` : '--'}
+                       {item.amount ? `${parseFloat(item.amount).toLocaleString()} DA` : '--'}
                     </td>
                     <td className="px-8 py-8 text-right">
                        {item.type === 'sale' ? (
                          <div className="flex flex-col items-end">
-                            <p className="font-black text-green-600 text-sm">{(item.paid || 0).toLocaleString()} DA</p>
-                            <p className={`text-[10px] font-black ${item.balance > 0 ? 'text-red-500' : 'text-slate-300'}`}>
-                              Reste: {(item.balance || 0).toLocaleString()} DA
+                            <p className="font-black text-green-600 text-sm">{parseFloat(item.paid || 0).toLocaleString()} DA</p>
+                            <p className={`text-[10px] font-black ${parseFloat(item.balance || 0) > 0 ? 'text-red-500' : 'text-slate-300'}`}>
+                              Reste: {parseFloat(item.balance || 0).toLocaleString()} DA
                             </p>
                          </div>
                        ) : item.type === 'purchase' ? (
@@ -430,66 +464,78 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
 
       {/* MODAL ENCAISSEMENT RAPIDE */}
       {payingSale && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-xl animate-in fade-in" onClick={() => setPayingSale(null)}></div>
-          <div className="relative bg-white w-full max-w-xl rounded-[4rem] p-12 shadow-2xl animate-in zoom-in-95 border border-red-600/20">
-             <div className="text-center mb-10">
-                <div className="h-20 w-20 rounded-[2.2rem] bg-green-50 text-green-600 flex items-center justify-center text-4xl mx-auto mb-6 shadow-inner">💰</div>
-                <h3 className="text-3xl font-black text-red-100 tracking-tight">Nouvel Encaissement</h3>
-                <p className="text-red-400/70 font-bold text-xs uppercase tracking-widest mt-2">{payingSale.first_name} {payingSale.last_name}</p>
-             </div>
-
-             <div className="space-y-8">
-                <div className="grid grid-cols-2 gap-6">
-                   <div className="bg-red-600/20 p-6 rounded-[2.5rem] border border-red-600/20">
-                      <p className="text-[10px] font-black text-red-400/70 uppercase mb-1">Prix Total</p>
-                      <p className="text-xl font-black text-red-100 tracking-tight">{(payingSale.total_price || 0).toLocaleString()} DA</p>
-                   </div>
-                   <div className="bg-red-50 p-6 rounded-[2.5rem] border border-red-100">
-                      <p className="text-[10px] font-black text-red-400 uppercase mb-1">Dette Actuelle</p>
-                      <p className="text-xl font-black text-red-600 tracking-tight">{(payingSale.balance || 0).toLocaleString()} DA</p>
-                   </div>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setPayingSale(null)}></div>
+          <div className="relative glass-card w-full max-w-2xl h-full max-h-[85vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
+            
+            {/* Modal Header */}
+            <div className="px-6 md:px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
+              <div className="flex items-center gap-6">
+                <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">💰</div>
+                <div>
+                  <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">Nouvel Encaissement</h2>
+                  <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">{payingSale.first_name} {payingSale.last_name}</p>
                 </div>
+              </div>
+              <button onClick={() => setPayingSale(null)} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                <div className="relative z-10 text-white">✕</div>
+              </button>
+            </div>
 
+            <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-8 py-8 space-y-8">
+              <div className="grid grid-cols-2 gap-6">
+                <DetailBox label="Prix Total" value={`${(payingSale.total_price || 0).toLocaleString()} DA`} />
+                <DetailBox label="Dette Actuelle" value={`${(payingSale.balance || 0).toLocaleString()} DA`} color="rose" />
+              </div>
+
+              <SectionBox title="Versement du jour" icon="💸">
                 <div className="space-y-4">
-                   <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-4">Montant Versé Aujourd'hui</label>
-                   <div className="relative">
-                      <input 
-                        type="number" 
-                        autoFocus
-                        value={newPaymentAmount || ''} 
-                        onChange={(e) => setNewPaymentAmount(Number(e.target.value))}
-                        className="w-full bg-slate-50 border-2 border-red-600/20 px-10 py-6 rounded-[2.5rem] outline-none focus:border-green-500 font-black text-4xl text-green-600 tracking-tighter transition-all"
-                        placeholder="0"
-                      />
-                      <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-black text-slate-300">DA</span>
-                   </div>
+                  <label className="text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-4">Montant Versé Aujourd'hui</label>
+                  <div className="relative group/input">
+                    <input 
+                      type="number" 
+                      autoFocus
+                      value={newPaymentAmount || ''} 
+                      onChange={(e) => setNewPaymentAmount(Number(e.target.value))}
+                      className="w-full bg-slate-900/30 border-2 border-red-600/20 px-10 py-6 rounded-[2.5rem] outline-none focus:border-red-500 font-black text-4xl text-red-400 tracking-tighter transition-all shadow-inner"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-10 top-1/2 -translate-y-1/2 text-xs font-black text-red-400/50">DA</span>
+                  </div>
                 </div>
+              </SectionBox>
 
-                <div className="p-8 bg-blue-50 rounded-[3rem] border border-red-600/30 flex justify-between items-center animate-pulse">
-                   <div>
-                      <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Futur Solde</p>
-                      <p className="text-2xl font-black text-red-400 tracking-tight">
-                        {((payingSale.balance || 0) - newPaymentAmount).toLocaleString()} DA
-                      </p>
-                   </div>
-                   <div className="text-right">
-                      <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Total Payé</p>
-                      <p className="text-lg font-bold text-red-400">{((payingSale.amount_paid || 0) + newPaymentAmount).toLocaleString()} DA</p>
-                   </div>
+              <div className="p-8 bg-blue-600/10 rounded-[3rem] border border-blue-600/30 flex justify-between items-center animate-pulse">
+                <div>
+                  <p className="text-[10px] font-black text-blue-400 uppercase mb-1 tracking-widest">Futur Solde</p>
+                  <p className="text-3xl font-black text-red-400 tracking-tight">
+                    {((payingSale.balance || 0) - newPaymentAmount).toLocaleString()} DA
+                  </p>
                 </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-blue-400 uppercase mb-1 tracking-widest">Total Payé</p>
+                  <p className="text-xl font-bold text-red-300">{((payingSale.amount_paid || 0) + newPaymentAmount).toLocaleString()} DA</p>
+                </div>
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-6 pt-4">
-                   <button onClick={() => setPayingSale(null)} className="py-6 rounded-[2.5rem] font-black uppercase text-xs tracking-widest text-red-400/70 bg-red-950/30">Annuler</button>
-                   <button 
-                     onClick={handleUpdatePayment}
-                     disabled={isUpdatingPayment || newPaymentAmount <= 0 || newPaymentAmount > (payingSale.balance || 0)}
-                     className="custom-gradient-btn py-6 rounded-[2.5rem] text-white font-black uppercase text-xs tracking-widest shadow-xl disabled:opacity-50"
-                   >
-                     {isUpdatingPayment ? 'Validation...' : 'Valider le Paiement 💎'}
-                   </button>
+            {/* Modal Footer */}
+            <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex items-center justify-center gap-4 shrink-0 flex-wrap">
+              <button onClick={() => setPayingSale(null)} className="px-8 py-3 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-xl hover:bg-slate-900/70 transition-all uppercase tracking-wider text-sm">Annuler</button>
+              <button 
+                onClick={handleUpdatePayment}
+                disabled={isUpdatingPayment || newPaymentAmount <= 0 || newPaymentAmount > (payingSale.balance || 0)}
+                className="relative group overflow-hidden px-12 py-3 font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm disabled:opacity-50"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                <div className="relative z-10 flex items-center justify-center gap-2 text-white">
+                  <span className="transition-all duration-300 group-hover:scale-125">{isUpdatingPayment ? '⌛' : '✅'}</span>
+                  <span className="transition-all duration-300 group-hover:tracking-[0.2em]">{isUpdatingPayment ? 'Validation...' : 'Valider le Paiement 💎'}</span>
                 </div>
-             </div>
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -655,45 +701,39 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
 
       {/* COMPREHENSIVE DETAILS MODAL - REDESIGNED */}
       {selectedItemForDetails && (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xl animate-in fade-in">
-          <div className="relative bg-slate-50 w-full max-w-6xl h-[95vh] rounded-[4rem] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 border-4 border-red-600/30">
-            {/* Header - REDESIGNED with Client Colors */}
-            <div className={`px-12 py-10 flex items-center justify-between bg-gradient-to-r ${
-              selectedItemForDetails.type === 'sale' ? 'from-cyan-500 to-blue-600' :
-              selectedItemForDetails.type === 'purchase' ? 'from-slate-700 to-slate-900' :
-              selectedItemForDetails.type === 'checkin' ? 'from-blue-500 to-red-600' :
-              'from-purple-500 to-pink-600'
-            } text-white shrink-0 shadow-lg relative overflow-hidden`}>
-               <div className="absolute inset-0 bg-red-600/10 backdrop-blur-[2px]"></div>
-               <div className="flex items-center gap-8 relative z-10">
-                  <div className="h-20 w-20 rounded-[2.2rem] bg-white text-red-400 flex items-center justify-center text-5xl shadow-2xl">
-                     {selectedItemForDetails.type === 'sale' ? '🚗' : selectedItemForDetails.type === 'purchase' ? '🛒' : selectedItemForDetails.type === 'checkin' ? '📥' : '📤'}
-                  </div>
-                  <div>
-                    <h2 className="text-4xl font-black tracking-tight">
-                      {selectedItemForDetails.type === 'sale' ? 'Détails de Vente' : selectedItemForDetails.type === 'purchase' ? 'Détails Achat' : selectedItemForDetails.type === 'checkin' ? 'Rapport Check-In' : 'Rapport Check-Out'}
-                    </h2>
-                    <p className="text-[10px] font-black text-white/70 uppercase tracking-[0.3em] mt-2">
-                       Référence: #{selectedItemForDetails.id?.slice(0,8).toUpperCase()} • {selectedItemForDetails.created_at ? new Date(selectedItemForDetails.created_at).toLocaleDateString('fr-FR') : '--'}
-                    </p>
-                  </div>
-               </div>
-               <button onClick={() => setSelectedItemForDetails(null)} className="h-16 w-16 bg-red-600/20 hover:bg-red-600/40 rounded-full flex items-center justify-center text-3xl text-white transition-all backdrop-blur-md relative z-10 border border-red-600/30/30">✕</button>
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setSelectedItemForDetails(null)}></div>
+          <div className="relative glass-card w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
+            
+            {/* Modal Header */}
+            <div className="px-6 md:px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
+              <div className="flex items-center gap-6">
+                <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">
+                  {selectedItemForDetails.type === 'sale' ? '🚗' : selectedItemForDetails.type === 'purchase' ? '🛒' : selectedItemForDetails.type === 'checkin' ? '📥' : '📤'}
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">
+                    {selectedItemForDetails.type === 'sale' ? 'Détails de Vente' : selectedItemForDetails.type === 'purchase' ? 'Détails Achat' : selectedItemForDetails.type === 'checkin' ? 'Rapport Check-In' : 'Rapport Check-Out'}
+                  </h2>
+                  <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">
+                    Référence: #{selectedItemForDetails.id?.slice(0,8).toUpperCase()} • {selectedItemForDetails.created_at ? new Date(selectedItemForDetails.created_at).toLocaleDateString('fr-FR') : '--'}
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setSelectedItemForDetails(null)} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                <div className="relative z-10 text-white">✕</div>
+              </button>
             </div>
 
             {/* Content Area */}
-            <div className="flex-grow overflow-y-auto custom-scrollbar p-12 bg-slate-50/50">
+            <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-8 py-8 space-y-12">
                {selectedItemForDetails.type === 'sale' ? (
-                 /* SALE DETAILS - REDESIGNED */
                  <>
                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                     {/* Left Column: Car & Images */}
                     <div className="space-y-12">
-                       <section className="glass-card rounded-[3.5rem] p-10 border border-red-600/20 shadow-sm space-y-8">
-                          <div className="flex items-center gap-5 border-b border-slate-50 pb-6">
-                             <span className="text-4xl">🚘</span>
-                             <h3 className="text-2xl font-black text-red-100">Spécifications Véhicule</h3>
-                          </div>
+                       <SectionBox title="Spécifications Véhicule" icon="🚘">
                           <div className="grid grid-cols-2 gap-4">
                              {(selectedItemForDetails.car?.photo_urls && selectedItemForDetails.car.photo_urls.length > 0) ? (
                                 selectedItemForDetails.car.photo_urls.map((url: string, i: number) => (
@@ -707,102 +747,88 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                                 </div>
                              )}
                           </div>
-                          <div className="grid grid-cols-2 gap-8">
-                             <DetailItem label="Marque & Modèle" value={`${selectedItemForDetails.car?.make} ${selectedItemForDetails.car?.model}`} large />
-                             <DetailItem label="Année" value={selectedItemForDetails.car?.year} />
-                             <DetailItem label="Kilométrage" value={`${(selectedItemForDetails.car?.mileage || 0).toLocaleString()} KM`} />
-                             <DetailItem label="Châssis (VIN)" value={selectedItemForDetails.car?.vin} />
-                             <DetailItem label="Transmission" value={selectedItemForDetails.car?.transmission} />
-                             <DetailItem label="Prix Showroom" value={`${(selectedItemForDetails.car?.selling_price || 0).toLocaleString()} DA`} />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <DetailBox label="Marque & Modèle" value={`${selectedItemForDetails.car?.make} ${selectedItemForDetails.car?.model}`} />
+                             <DetailBox label="Année" value={selectedItemForDetails.car?.year} />
+                             <DetailBox label="Kilométrage" value={`${(selectedItemForDetails.car?.mileage || 0).toLocaleString()} KM`} />
+                             <DetailBox label="Châssis (VIN)" value={selectedItemForDetails.car?.vin} />
+                             <DetailBox label="Transmission" value={selectedItemForDetails.car?.transmission} />
+                             <DetailBox label="Prix Showroom" value={`${(selectedItemForDetails.car?.selling_price || 0).toLocaleString()} DA`} />
                           </div>
-                       </section>
+                       </SectionBox>
                        
-                       <section className="bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-[3.5rem] p-12 space-y-8 shadow-2xl relative overflow-hidden">
-                          <div className="absolute -top-10 -right-10 h-40 w-40 bg-red-600/10 rounded-full blur-3xl"></div>
-                          <div className="flex items-center gap-5 border-b border-red-600/20 pb-6 relative z-10">
-                             <span className="text-4xl">💰</span>
-                             <h3 className="text-2xl font-black uppercase tracking-tight">Résumé Financier</h3>
-                          </div>
-                          <div className="space-y-8 relative z-10">
-                             <div className="flex justify-between items-end border-b border-red-600/30/10 pb-6">
-                                <div><p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-2">Prix de Vente</p><p className="text-5xl font-black tracking-tighter">{selectedItemForDetails.total_price.toLocaleString()} DA</p></div>
-                                <span className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest bg-white text-red-400 shadow-xl`}>{selectedItemForDetails.status === 'completed' ? 'Totalement Payée' : 'Dette en cours'}</span>
+                       <SectionBox title="Résumé Financier" icon="💰">
+                          <div className="space-y-8">
+                             <div className="flex justify-between items-end border-b border-red-600/20 pb-6">
+                                <div><p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-2">Prix de Vente</p><p className="text-5xl font-black text-red-100 tracking-tighter">{selectedItemForDetails.total_price.toLocaleString()} DA</p></div>
+                                <span className={`px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest ${selectedItemForDetails.status === 'completed' ? 'bg-green-600/20 text-green-400 border border-green-600/30' : 'bg-red-600/20 text-red-400 border border-red-600/30 shadow-xl'}`}>{selectedItemForDetails.status === 'completed' ? 'Totalement Payée' : 'Dette en cours'}</span>
                              </div>
                              <div className="grid grid-cols-2 gap-8">
-                                <div className="bg-red-600/10 p-6 rounded-[2rem] border border-red-600/30/10"><p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Total Encaissé</p><p className="text-2xl font-black text-white">{selectedItemForDetails.amount_paid.toLocaleString()} DA</p></div>
-                                <div className="bg-red-500/20 p-6 rounded-[2rem] border border-red-600/30/10"><p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-1">Reste</p><p className="text-2xl font-black text-white underline">{selectedItemForDetails.balance.toLocaleString()} DA</p></div>
+                                <div className="bg-red-600/10 p-6 rounded-[2rem] border border-red-600/20"><p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Total Encaissé</p><p className="text-2xl font-black text-green-400">{selectedItemForDetails.amount_paid.toLocaleString()} DA</p></div>
+                                <div className="bg-red-600/20 p-6 rounded-[2rem] border border-red-600/20"><p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-1">Reste</p><p className="text-2xl font-black text-red-400 underline">{selectedItemForDetails.balance.toLocaleString()} DA</p></div>
                              </div>
                           </div>
-                       </section>
+                       </SectionBox>
                     </div>
 
                     {/* Right Column: Client & Documents */}
                     <div className="space-y-12">
-                       <section className="glass-card rounded-[3.5rem] p-10 border border-red-600/20 shadow-sm space-y-10">
-                          <div className="flex items-center gap-5 border-b border-slate-50 pb-6">
-                             <span className="text-4xl">👤</span>
-                             <h3 className="text-2xl font-black text-red-100">Informations Client</h3>
-                          </div>
-                          <div className="flex items-center gap-8 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-50">
-                             <div className="h-32 w-32 rounded-[3rem] bg-white border-4 border-red-600/30 shadow-xl overflow-hidden shrink-0 flex items-center justify-center text-6xl">
+                       <SectionBox title="Informations Client" icon="👤">
+                          <div className="flex items-center gap-8 bg-red-600/10 p-8 rounded-[2.5rem] border border-red-600/20">
+                             <div className="h-32 w-32 rounded-[3rem] bg-slate-900 border-4 border-red-600/30 shadow-xl overflow-hidden shrink-0 flex items-center justify-center text-6xl">
                                 {selectedItemForDetails.photo_url ? <img src={selectedItemForDetails.photo_url} className="w-full h-full object-cover" /> : '👤'}
                              </div>
                              <div><p className="text-3xl font-black text-red-100 leading-none mb-3 tracking-tight">{selectedItemForDetails.first_name} {selectedItemForDetails.last_name}</p><p className="text-red-400 font-black text-sm uppercase tracking-widest">{selectedItemForDetails.mobile1}</p></div>
                           </div>
-                          <div className="grid grid-cols-2 gap-8 px-4">
-                             <DetailItem label="Adresse" value={selectedItemForDetails.address || '—'} large />
-                             <DetailItem label="Profession" value={selectedItemForDetails.profession || '—'} />
-                             <DetailItem label="NIF" value={selectedItemForDetails.nif || '—'} />
-                             <DetailItem label="RC" value={selectedItemForDetails.rc || '—'} />
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <DetailBox label="Adresse" value={selectedItemForDetails.address || '—'} />
+                             <DetailBox label="Profession" value={selectedItemForDetails.profession || '—'} />
+                             <DetailBox label="NIF" value={selectedItemForDetails.nif || '—'} />
+                             <DetailBox label="RC" value={selectedItemForDetails.rc || '—'} />
                           </div>
-                       </section>
+                       </SectionBox>
 
-                       <section className="bg-gradient-to-br from-purple-500 to-red-600 text-white rounded-[3.5rem] p-10 space-y-8 shadow-2xl relative overflow-hidden">
-                          <div className="absolute bottom-0 right-0 h-40 w-40 bg-white/5 rounded-full blur-3xl"></div>
-                          <div className="flex items-center gap-5 border-b border-red-600/20 pb-6 relative z-10">
-                             <span className="text-4xl">📂</span>
-                             <h3 className="text-2xl font-black tracking-tight uppercase">Dossier Juridique</h3>
-                          </div>
-                          <div className="bg-red-600/10 p-8 rounded-[3rem] border border-red-600/20 relative z-10">
-                             <p className="text-[10px] font-black text-white/60 uppercase tracking-widest mb-4">{selectedItemForDetails.doc_type} N° {selectedItemForDetails.doc_number}</p>
-                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-red-600/30/30 aspect-[16/10] bg-white group relative shadow-inner">
+                       <SectionBox title="Dossier Juridique" icon="📂">
+                          <div className="space-y-6">
+                             <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mb-4">{selectedItemForDetails.doc_type} N° {selectedItemForDetails.doc_number}</p>
+                             <div className="rounded-[2.5rem] overflow-hidden border-2 border-red-600/30 aspect-[16/10] bg-slate-900 group relative shadow-inner">
                                 {selectedItemForDetails.scan_url ? (
                                   <>
                                     <img src={selectedItemForDetails.scan_url} className="w-full h-full object-contain p-4 transition-transform group-hover:scale-110" />
-                                    <a href={selectedItemForDetails.scan_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-blue-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
-                                       <span className="px-8 py-4 bg-white text-red-400 rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl">Ouvrir ↗</span>
+                                    <a href={selectedItemForDetails.scan_url} target="_blank" rel="noopener noreferrer" className="absolute inset-0 bg-red-600/60 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
+                                       <span className="px-8 py-4 bg-white text-red-600 rounded-[1.5rem] font-black text-xs uppercase tracking-widest shadow-2xl">Ouvrir ↗</span>
                                     </a>
                                   </>
-                                ) : <div className="w-full h-full flex items-center justify-center text-slate-300 text-6xl">📄</div>}
+                                ) : <div className="w-full h-full flex items-center justify-center text-slate-300 text-6xl opacity-20">📄</div>}
                              </div>
                           </div>
-                       </section>
+                       </SectionBox>
                     </div>
                  </div>
 
                   {/* LINKED INSPECTION CHECKLIST */}
                   <div className="mt-8 space-y-4">
                     <div className="flex items-center gap-3">
-                       <span className="h-1.5 w-8 rounded-full bg-slate-300"></span>
+                       <span className="h-1.5 w-8 rounded-full bg-red-600/30"></span>
                        <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Inspection Check-Out liée</p>
                     </div>
                     {selectedItemForDetails.linkedInspection ? (
-                      <div className="space-y-6 glass-card rounded-[3.5rem] p-10 border border-red-600/20 shadow-sm">
-                         <div className="flex items-center gap-4 pb-4 border-b border-slate-50">
-                           <span className="text-3xl">📤</span>
-                           <div>
-                             <p className="font-black text-red-100 text-lg">{selectedItemForDetails.linkedInspection.car_name}</p>
-                             <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{(selectedItemForDetails.linkedInspection.mileage||0).toLocaleString()} KM • {selectedItemForDetails.linkedInspection.partner_name}</p>
-                           </div>
-                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <InspectionSection title="Contrôle Sécurité" icon="🛡️" items={selectedItemForDetails.linkedInspection.safety} labels={{ lights: 'Feux et phares', tires: 'Pneus', brakes: 'Freins', wipers: 'Essuie-glaces', mirrors: 'Rétroviseurs', seatbelts: 'Ceintures', horn: 'Klaxon' }} color="blue" />
-                           <InspectionSection title="Dotation Bord" icon="🧰" items={selectedItemForDetails.linkedInspection.equipment} labels={{ spareWheel: 'Roue de secours', jack: 'Cric', triangles: 'Triangles', firstAid: 'Trousse secours', docs: 'Documents' }} color="emerald" />
-                           <InspectionSection title="État et Confort" icon="✨" items={selectedItemForDetails.linkedInspection.comfort} labels={{ ac: 'Climatisation', cleanliness: 'Propreté' }} color="purple" note={selectedItemForDetails.linkedInspection.note} />
-                         </div>
-                      </div>
+                      <SectionBox title="Rapport d'Inspection" icon="📤">
+                          <div className="flex items-center gap-4 pb-4 border-b border-red-600/20">
+                            <span className="text-3xl">🚗</span>
+                            <div>
+                              <p className="font-black text-red-100 text-lg">{selectedItemForDetails.linkedInspection.car_name}</p>
+                              <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{(selectedItemForDetails.linkedInspection.mileage||0).toLocaleString()} KM • {selectedItemForDetails.linkedInspection.partner_name}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <InspectionSection title="Contrôle Sécurité" icon="🛡️" items={selectedItemForDetails.linkedInspection.safety} labels={{ lights: 'Feux et phares', tires: 'Pneus', brakes: 'Freins', wipers: 'Essuie-glaces', mirrors: 'Rétroviseurs', seatbelts: 'Ceintures', horn: 'Klaxon' }} color="blue" />
+                            <InspectionSection title="Dotation Bord" icon="🧰" items={selectedItemForDetails.linkedInspection.equipment} labels={{ spareWheel: 'Roue de secours', jack: 'Cric', triangles: 'Triangles', firstAid: 'Trousse secours', docs: 'Documents' }} color="emerald" />
+                            <InspectionSection title="État et Confort" icon="✨" items={selectedItemForDetails.linkedInspection.comfort} labels={{ ac: 'Climatisation', cleanliness: 'Propreté' }} color="purple" note={selectedItemForDetails.linkedInspection.note} />
+                          </div>
+                      </SectionBox>
                     ) : (
-                      <div className="rounded-[2rem] border-2 border-dashed border-red-600/30 p-8 text-center opacity-50">
+                      <div className="rounded-[2rem] border-2 border-dashed border-red-600/30 p-8 text-center opacity-30">
                          <span className="text-4xl">🛡️</span>
                          <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-3">Aucune inspection Check-Out liée à ce véhicule</p>
                       </div>
@@ -812,28 +838,16 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                ) : selectedItemForDetails.type === 'purchase' ? (
                  /* PURCHASE DETAILS WITH LINKED CHECKLIST */
                  <div className="space-y-8">
-                    <section className="glass-card rounded-[3rem] p-8 border border-red-600/20 shadow-sm">
+                    <SectionBox title="Détails de l'Achat" icon="🛒">
                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Fournisseur</p>
-                             <p className="font-black text-red-100 text-sm truncate">{selectedItemForDetails.supplier_name || '—'}</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Véhicule</p>
-                             <p className="font-black text-red-100 text-sm">{selectedItemForDetails.make} {selectedItemForDetails.model} {selectedItemForDetails.year}</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">VIN</p>
-                             <p className="font-black text-red-400 text-xs font-mono">{selectedItemForDetails.vin || '—'}</p>
-                          </div>
-                          <div className="bg-emerald-50 rounded-[2rem] p-5 border border-emerald-100">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Coût Achat</p>
-                             <p className="font-black text-xl text-emerald-700">{(selectedItemForDetails.total_cost||0).toLocaleString()} DA</p>
-                          </div>
+                          <DetailBox label="Fournisseur" value={selectedItemForDetails.supplier_name || '—'} />
+                          <DetailBox label="Véhicule" value={`${selectedItemForDetails.make} ${selectedItemForDetails.model} ${selectedItemForDetails.year}`} />
+                          <DetailBox label="VIN" value={selectedItemForDetails.vin || '—'} />
+                          <DetailBox label="Coût Achat" value={`${(selectedItemForDetails.total_cost||0).toLocaleString()} DA`} color="blue" />
                        </div>
-                    </section>
+                    </SectionBox>
                     <div>
-                       <div className="flex items-center gap-3 mb-4"><span className="h-1.5 w-8 rounded-full bg-slate-300"></span><p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Checklist d'Achat</p></div>
+                       <div className="flex items-center gap-3 mb-4"><span className="h-1.5 w-8 rounded-full bg-red-600/30"></span><p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">Checklist d'Achat</p></div>
                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                          <InspectionSection title="Contrôle Sécurité" icon="🛡️" items={selectedItemForDetails.safety_checklist} labels={{ lights: 'Feux et phares', tires: 'Pneus', brakes: 'Freins', wipers: 'Essuie-glaces', mirrors: 'Rétroviseurs', seatbelts: 'Ceintures', horn: 'Klaxon' }} color="blue" />
                          <InspectionSection title="Dotation Bord" icon="🧰" items={selectedItemForDetails.equipment_checklist} labels={{ spareWheel: 'Roue de secours', jack: 'Cric', triangles: 'Triangles', firstAid: 'Trousse secours', docs: 'Documents' }} color="emerald" />
@@ -841,46 +855,34 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
                        </div>
                     </div>
                     {selectedItemForDetails.linkedInspection && (
-                      <section className="glass-card rounded-[3.5rem] p-10 border border-red-600/20 shadow-sm space-y-6">
-                         <div className="flex items-center gap-4 pb-4 border-b border-slate-50">
-                           <span className="text-3xl">📥</span>
-                           <div>
-                             <p className="font-black text-red-100 text-lg">Inspection Check-In associée</p>
-                             <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{(selectedItemForDetails.linkedInspection.mileage||0).toLocaleString()} KM • {selectedItemForDetails.linkedInspection.partner_name}</p>
-                           </div>
-                         </div>
-                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                           <InspectionSection title="Contrôle Sécurité" icon="🛡️" items={selectedItemForDetails.linkedInspection.safety} labels={{ lights: 'Feux et phares', tires: 'Pneus', brakes: 'Freins', wipers: 'Essuie-glaces', mirrors: 'Rétroviseurs', seatbelts: 'Ceintures', horn: 'Klaxon' }} color="blue" />
-                           <InspectionSection title="Dotation Bord" icon="🧰" items={selectedItemForDetails.linkedInspection.equipment} labels={{ spareWheel: 'Roue de secours', jack: 'Cric', triangles: 'Triangles', firstAid: 'Trousse secours', docs: 'Documents' }} color="emerald" />
-                           <InspectionSection title="État et Confort" icon="✨" items={selectedItemForDetails.linkedInspection.comfort} labels={{ ac: 'Climatisation', cleanliness: 'Propreté' }} color="purple" note={selectedItemForDetails.linkedInspection.note} />
-                         </div>
-                      </section>
+                      <SectionBox title="Inspection Check-In associée" icon="📥">
+                          <div className="flex items-center gap-4 pb-4 border-b border-red-600/20">
+                            <span className="text-3xl">🚗</span>
+                            <div>
+                              <p className="font-black text-red-100 text-lg">Rapport technique</p>
+                              <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{(selectedItemForDetails.linkedInspection.mileage||0).toLocaleString()} KM • {selectedItemForDetails.linkedInspection.partner_name}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <InspectionSection title="Contrôle Sécurité" icon="🛡️" items={selectedItemForDetails.linkedInspection.safety} labels={{ lights: 'Feux et phares', tires: 'Pneus', brakes: 'Freins', wipers: 'Essuie-glaces', mirrors: 'Rétroviseurs', seatbelts: 'Ceintures', horn: 'Klaxon' }} color="blue" />
+                            <InspectionSection title="Dotation Bord" icon="🧰" items={selectedItemForDetails.linkedInspection.equipment} labels={{ spareWheel: 'Roue de secours', jack: 'Cric', triangles: 'Triangles', firstAid: 'Trousse secours', docs: 'Documents' }} color="emerald" />
+                            <InspectionSection title="État et Confort" icon="✨" items={selectedItemForDetails.linkedInspection.comfort} labels={{ ac: 'Climatisation', cleanliness: 'Propreté' }} color="purple" note={selectedItemForDetails.linkedInspection.note} />
+                          </div>
+                      </SectionBox>
                     )}
                  </div>
                ) : (
                  /* INSPECTION DETAILS - FULL CHECKLIST */
                  <div className="space-y-8">
                     {/* Header Info Bar */}
-                    <section className="glass-card rounded-[3rem] p-8 border border-red-600/20 shadow-sm">
+                    <SectionBox title="Détails de l'Opération" icon="⚙️">
                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Opérateur</p>
-                             <p className="font-black text-red-100 text-sm truncate">{selectedItemForDetails.partner_name || '—'}</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Véhicule</p>
-                             <p className="font-black text-red-100 text-sm truncate">{selectedItemForDetails.car_name || '—'}</p>
-                          </div>
-                          <div className="bg-slate-50 rounded-[2rem] p-5 border border-red-600/20">
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">VIN / Châssis</p>
-                             <p className="font-black text-red-400 text-xs font-mono">{selectedItemForDetails.vin || '—'}</p>
-                          </div>
-                          <div className={`rounded-[2rem] p-5 border ${selectedItemForDetails.type === 'checkin' ? 'bg-blue-50 border-red-600/30' : 'bg-purple-50 border-purple-100'}`}>
-                             <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Kilométrage</p>
-                             <p className={`font-black text-xl tracking-tighter ${selectedItemForDetails.type === 'checkin' ? 'text-red-400' : 'text-purple-600'}`}>{(selectedItemForDetails.mileage || 0).toLocaleString()} KM</p>
-                          </div>
+                          <DetailBox label="Opérateur" value={selectedItemForDetails.partner_name || '—'} />
+                          <DetailBox label="Véhicule" value={selectedItemForDetails.car_name || '—'} />
+                          <DetailBox label="VIN / Châssis" value={selectedItemForDetails.vin || '—'} />
+                          <DetailBox label="Kilométrage" value={`${(selectedItemForDetails.mileage || 0).toLocaleString()} KM`} color="blue" />
                        </div>
-                    </section>
+                    </SectionBox>
 
                     {/* Full Checklist Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -910,27 +912,30 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
 
                     {/* Photos */}
                     {((selectedItemForDetails.exterior_photo_urls?.length > 0) || (selectedItemForDetails.interior_photo_urls?.length > 0)) && (
-                       <section className="glass-card rounded-[3rem] p-8 border border-red-600/20 shadow-sm">
-                          <div className="flex items-center gap-3 border-b border-slate-50 pb-4 mb-6">
-                             <span className="text-2xl">📸</span>
-                             <h4 className="font-black text-red-100 uppercase tracking-widest text-xs">Galerie d'Inspection</h4>
-                          </div>
+                       <SectionBox title="Galerie d'Inspection" icon="📸">
                           <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
                              {[...(selectedItemForDetails.exterior_photo_urls || []), ...(selectedItemForDetails.interior_photo_urls || [])].map((url: string, i: number) => (
-                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-[1.5rem] overflow-hidden border-2 border-red-600/20 shadow-sm hover:scale-105 transition-transform block">
+                                <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="aspect-square rounded-[1.5rem] overflow-hidden border-2 border-red-600/30 shadow-sm hover:scale-105 transition-transform block">
                                    <img src={url} className="w-full h-full object-cover" alt={`Photo ${i+1}`} />
                                 </a>
                              ))}
                           </div>
-                       </section>
+                       </SectionBox>
                     )}
                  </div>
                )}
             </div>
 
-            {/* Footer Actions */}
-            <div className="px-12 py-10 bg-white border-t border-red-600/20 flex justify-end items-center shrink-0">
-               <button onClick={() => setSelectedItemForDetails(null)} className="px-12 py-5 rounded-[2rem] bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-black uppercase text-xs tracking-widest transition-all shadow-xl hover:scale-105 active:scale-95">Fermer le Dossier</button>
+            {/* Modal Footer */}
+            <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex items-center justify-end gap-4 shrink-0 flex-wrap">
+              <button onClick={() => setSelectedItemForDetails(null)} className="relative group overflow-hidden px-12 py-3 font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm">
+                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+                <div className="relative z-10 flex items-center justify-center gap-2 text-white">
+                  <span className="transition-all duration-300 group-hover:scale-125">📂</span>
+                  <span className="transition-all duration-300 group-hover:tracking-[0.2em]">Fermer le Dossier</span>
+                </div>
+              </button>
             </div>
           </div>
         </div>
@@ -940,53 +945,93 @@ export const Billing: React.FC<BillingProps> = ({ lang }) => {
 };
 
 // --- Helper Components ---
-const DetailItem: React.FC<{ label: string; value: any; large?: boolean }> = ({ label, value, large }) => (
-  <div className={large ? 'col-span-2' : ''}>
-    <p className="text-[9px] font-black text-red-400/70 uppercase tracking-[0.1em] mb-1">{label}</p>
-    <p className={`font-black text-red-100 tracking-tight ${large ? 'text-lg' : 'text-sm'}`}>{value || '—'}</p>
-  </div>
-);
-
 const InspectionSection: React.FC<{ title: string; icon: string; items: any; labels?: Record<string,string>; color?: string; note?: string }> = ({ title, icon, items, labels = {}, color = 'blue', note }) => {
   const allEntries = Object.entries(items || {});
   const passCount = allEntries.filter(([_, v]) => v).length;
-  const colorMap: Record<string, string> = {
-    blue: 'bg-blue-50 border-blue-200 text-blue-700',
-    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-    purple: 'bg-purple-50 border-purple-200 text-purple-700',
+  
+  const colorMap: Record<string, { badge: string; text: string }> = {
+    blue: { badge: 'bg-blue-600/30 text-blue-300 border-blue-600/40', text: 'text-blue-300' },
+    emerald: { badge: 'bg-emerald-600/30 text-emerald-300 border-emerald-600/40', text: 'text-emerald-300' },
+    purple: { badge: 'bg-purple-600/30 text-purple-300 border-purple-600/40', text: 'text-purple-300' },
   };
-  const badgeColor = colorMap[color] || colorMap.blue;
+  
+  const colors = colorMap[color] || colorMap.blue;
+
   return (
-    <div className="bg-white border-2 border-red-600/20 rounded-[2.5rem] p-8 space-y-5 flex flex-col">
-       <div className="flex items-center justify-between border-b border-slate-50 pb-4">
+    <div className="bg-slate-900/40 border border-red-600/20 rounded-[2rem] p-6 space-y-5 flex flex-col shadow-inner backdrop-blur-sm">
+       <div className="flex items-center justify-between border-b border-red-600/10 pb-4">
           <div className="flex items-center gap-3">
-             <span className="text-2xl">{icon}</span>
-             <h4 className="font-black text-red-100 uppercase tracking-widest text-[10px]">{title}</h4>
+             <span className="text-xl">{icon}</span>
+             <h4 className="font-black text-red-200 uppercase tracking-widest text-[10px]">{title}</h4>
           </div>
-          <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${badgeColor}`}>{passCount}/{allEntries.length}</span>
+          <span className={`px-3 py-1 rounded-full text-[9px] font-black border ${colors.badge}`}>{passCount}/{allEntries.length}</span>
        </div>
        <div className="space-y-2 flex-grow">
           {allEntries.length > 0 ? allEntries.map(([key, val]) => (
-            <div key={key} className={`flex items-center justify-between p-3 rounded-[1.2rem] border transition-all ${
-              val ? 'bg-green-50/60 border-green-100' : 'bg-red-50/40 border-red-100 opacity-70'
+            <div key={key} className={`flex items-center justify-between p-3 rounded-xl border transition-all duration-300 ${
+              val ? 'bg-green-600/10 border-green-600/20' : 'bg-red-600/10 border-red-600/20 opacity-60 hover:opacity-100'
             }`}>
-               <span className={`text-[11px] font-black uppercase tracking-wide ${val ? 'text-red-100' : 'text-red-400/70'}`}>
+               <span className={`text-[10px] font-black uppercase tracking-wide ${val ? 'text-green-300' : 'text-red-300'}`}>
                  {labels[key] || key}
                </span>
-               <div className={`h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-black ${
-                 val ? 'bg-green-500 text-white shadow-sm shadow-green-300' : 'bg-red-200 text-red-500'
+               <div className={`h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-black ${
+                 val ? 'bg-green-600 text-white shadow-lg shadow-green-600/40' : 'bg-red-600 text-white shadow-lg shadow-red-600/40'
                }`}>
                  {val ? '✓' : '✕'}
                </div>
             </div>
-          )) : <p className="text-slate-300 text-[10px] font-bold uppercase text-center py-4">Aucun élément</p>}
+          )) : <p className="text-red-400/30 text-[10px] font-black uppercase text-center py-4 tracking-widest italic">Aucun élément</p>}
        </div>
        {note && (
-         <div className="mt-2 pt-4 border-t border-slate-50">
-            <p className="text-[9px] font-black text-red-400/70 uppercase tracking-widest mb-1">Note</p>
-            <p className="text-xs font-bold text-red-400/70 italic leading-relaxed">{note}</p>
+         <div className="mt-2 pt-4 border-t border-red-600/10">
+            <p className="text-[9px] font-black text-red-400/50 uppercase tracking-widest mb-1">Observation</p>
+            <p className="text-xs font-bold text-red-300/70 italic leading-relaxed">{note}</p>
          </div>
        )}
+    </div>
+  );
+};
+
+const SectionBox: React.FC<{ title: string, icon: string, children: React.ReactNode }> = ({ title, icon, children }) => (
+  <div className="bg-red-600/10 rounded-[2rem] p-6 space-y-6 border border-red-600/30">
+    <div className="flex items-center gap-4">
+       <div className="h-10 w-10 rounded-lg bg-red-600/30 text-red-300 flex items-center justify-center text-lg border border-red-600/30">{icon}</div>
+       <h4 className="text-lg font-black text-red-200 tracking-tight">{title}</h4>
+    </div>
+    <div>{children}</div>
+  </div>
+);
+
+const FormField: React.FC<{ label: string, name: string, value?: any, onChange?: any, type?: string, icon?: string, disabled?: boolean }> = ({ label, name, value, onChange, type = 'text', icon, disabled }) => (
+  <div className="space-y-2">
+    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">{label}</label>
+    <div className="relative group/field">
+      {icon && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-40 group-focus-within/field:opacity-100 transition-all">{icon}</span>}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
+        className={`w-full bg-slate-900/30 border ${icon ? 'pl-12' : 'px-4'} py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 shadow-sm transition-all text-sm tracking-tight border-red-600/30 placeholder-red-400/40 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      />
+    </div>
+  </div>
+);
+
+const DetailBox = ({ label, value, color = 'red' }: { label: string; value: string; color?: string }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-600/20', border: 'border-red-600/30', label: 'text-red-400/70', value: 'text-red-200' },
+    blue: { bg: 'bg-blue-600/20', border: 'border-blue-600/30', label: 'text-blue-400/70', value: 'text-blue-200' },
+    rose: { bg: 'bg-rose-600/20', border: 'border-rose-600/30', label: 'text-rose-400/70', value: 'text-rose-200' }
+  };
+  
+  const colors = colorMap[color as keyof typeof colorMap] || colorMap.red;
+
+  return (
+    <div className={`${colors.bg} ${colors.border} p-4 rounded-[1.5rem] border`}>
+      <p className={`text-xs font-black ${colors.label} uppercase tracking-wider`}>{label}</p>
+      <p className={`font-black ${colors.value} mt-2 break-words`}>{value}</p>
     </div>
   );
 };

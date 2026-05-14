@@ -465,15 +465,25 @@ const AlertCard = ({ alert, onNavigate, index }: any) => {
 };
 
 const VehicleCard = ({ car, index }: any) => {
+  let photoUrl = '';
+  try {
+    if (car.photo_urls) {
+      const urls = typeof car.photo_urls === 'string' ? JSON.parse(car.photo_urls) : car.photo_urls;
+      photoUrl = Array.isArray(urls) ? urls[0] : '';
+    }
+  } catch (e) {
+    console.warn('Photo URL parse error:', e);
+  }
+
   return (
     <div
       className="glass-card rounded-[2.5rem] overflow-hidden border border-red-600/40 hover:border-red-600/60 hover:shadow-lg hover:shadow-red-600/20 transition-all duration-300 hover:scale-105 hover:-translate-y-2 group"
       style={{ animationDelay: `${index * 50}ms` }}
     >
-      {car.photo_urls && JSON.parse(car.photo_urls || '[]')[0] && (
+      {photoUrl && (
         <div className="h-40 overflow-hidden bg-red-950/50 relative">
           <img 
-            src={JSON.parse(car.photo_urls)[0]} 
+            src={photoUrl} 
             alt={`${car.make} ${car.model}`}
             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
           />

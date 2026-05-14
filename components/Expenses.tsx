@@ -668,119 +668,164 @@ export const Expenses: React.FC<ExpensesProps> = ({ lang, userName }) => {
   );
 };
 
-const SectionBox = ({ title, icon, children }: any) => (
-  <div className="glass-card rounded-[3.5rem] p-10 space-y-10 shadow-2xl border border-red-600/10 hover:border-red-600/30 transition-all duration-500 relative overflow-hidden group/section">
-    <div className="absolute inset-0 bg-gradient-to-br from-red-600/[0.02] to-transparent opacity-0 group-hover/section:opacity-100 transition-opacity"></div>
-    <div className="flex items-center gap-6 relative z-10">
-       <div className="h-14 w-14 rounded-2xl bg-red-600/10 text-red-400 flex items-center justify-center text-3xl shadow-inner border border-red-600/20 group-hover/section:scale-110 transition-transform">{icon}</div>
-       <h4 className="text-base font-black text-red-100 uppercase tracking-[0.4em] italic">{title}</h4>
+// --- Helper Components ---
+const SectionBox: React.FC<{ title: string, icon: string, children: React.ReactNode }> = ({ title, icon, children }) => (
+  <div className="bg-red-600/10 rounded-[2rem] p-6 space-y-6 border border-red-600/30">
+    <div className="flex items-center gap-4">
+       <div className="h-10 w-10 rounded-lg bg-red-600/30 text-red-300 flex items-center justify-center text-lg border border-red-600/30">{icon}</div>
+       <h4 className="text-lg font-black text-red-200 tracking-tight">{title}</h4>
     </div>
-    <div className="relative z-10">{children}</div>
+    <div>{children}</div>
   </div>
 );
 
-const FieldBox = ({ label, name, value, onChange, type = 'text', placeholder = '' }: any) => (
-  <div className="space-y-4">
-    <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">{label}</label>
-    <div className="relative group/input">
-      <input 
-        type={type} 
-        name={name} 
-        value={value} 
-        onChange={onChange} 
+const FormField: React.FC<{ label: string, name: string, value?: any, onChange?: any, type?: string, icon?: string, disabled?: boolean, placeholder?: string }> = ({ label, name, value, onChange, type = 'text', icon, disabled, placeholder }) => (
+  <div className="space-y-2">
+    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">{label}</label>
+    <div className="relative group/field">
+      {icon && <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg opacity-40 group-focus-within/field:opacity-100 transition-all">{icon}</span>}
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        disabled={disabled}
         placeholder={placeholder}
-        className="w-full bg-red-600/[0.03] border border-red-600/20 px-8 py-6 rounded-[2.5rem] outline-none focus:border-red-600/60 focus:bg-red-600/[0.06] font-black text-red-100 transition-all shadow-inner group-hover/input:border-red-600/40" 
+        className={`w-full bg-slate-900/30 border ${icon ? 'pl-12' : 'px-4'} py-3 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 shadow-sm transition-all text-sm tracking-tight border-red-600/30 placeholder-red-400/40 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-1 bg-red-600 transition-all duration-500 group-hover/input:w-1/2 opacity-50 blur-sm"></div>
     </div>
   </div>
 );
+
+const DetailBox = ({ label, value, color = 'red' }: { label: string; value: string; color?: string }) => {
+  const colorMap = {
+    red: { bg: 'bg-red-600/20', border: 'border-red-600/30', label: 'text-red-400/70', value: 'text-red-200' },
+    blue: { bg: 'bg-blue-600/20', border: 'border-blue-600/30', label: 'text-blue-400/70', value: 'text-blue-200' },
+    rose: { bg: 'bg-rose-600/20', border: 'border-rose-600/30', label: 'text-rose-400/70', value: 'text-rose-200' }
+  };
+  const colors = colorMap[color as keyof typeof colorMap] || colorMap.red;
+  return (
+    <div className={`${colors.bg} ${colors.border} p-4 rounded-[1.5rem] border`}>
+      <p className={`text-xs font-black ${colors.label} uppercase tracking-wider`}>{label}</p>
+      <p className={`font-black ${colors.value} mt-2 break-words`}>{value}</p>
+    </div>
+  );
+};
 
 const ExpenseForm: React.FC<{ lang: Language; onClose: () => void; onSubmit: (data: any) => void; initialData: Expense | null }> = ({ lang, onClose, onSubmit, initialData }) => {
   const t = translations[lang];
   const [formData, setFormData] = useState<Partial<Expense>>(initialData || { name: '', cost: 0, date: new Date().toISOString().split('T')[0] });
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-in fade-in" onClick={onClose}></div>
-      <div className="relative bg-[#020617] w-full max-w-2xl rounded-[3rem] shadow-2xl animate-in zoom-in-95 overflow-hidden border border-red-600/30 flex flex-col">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={onClose}></div>
+      <div className="relative glass-card w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-black p-10 border-b border-red-600/30 shrink-0">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center text-3xl shadow-lg border border-red-400/30">
-                📝
-              </div>
-              <div>
-                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 uppercase tracking-tight">
-                  {initialData ? 'Modifier Charge' : 'Nouvelle Charge'}
-                </h3>
-                <p className="text-[10px] font-black text-red-500/50 uppercase tracking-[0.3em] mt-1">Configuration Magasin</p>
-              </div>
+        <div className="px-6 md:px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
+          <div className="flex items-center gap-6">
+            <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">
+              📝
             </div>
-            <button onClick={onClose} className="h-12 w-12 bg-red-950/50 border border-red-600/30 rounded-full flex items-center justify-center text-red-400/70 hover:bg-red-600/20 transition-all hover:scale-110 active:scale-90">✕</button>
+            <div>
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">
+                {initialData ? 'Modifier Charge' : 'Nouvelle Charge'}
+              </h2>
+              <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">Architecture de Gestion Magasin</p>
+            </div>
           </div>
+          <button onClick={onClose} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="relative z-10 text-white">✕</div>
+          </button>
         </div>
 
-        <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
-
-          <div className="space-y-8">
-            <FieldBox 
-              label="Désignation de la Charge" 
-              value={formData.name} 
-              onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="Ex: Loyer, Electricité, Papeterie..."
-            />
+        <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8">
+          <div className="flex flex-col lg:flex-row gap-8 py-8">
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               <FieldBox 
-                 label="Montant (DA)" 
-                 type="number" 
-                 value={formData.cost} 
-                 onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
-               />
-               <FieldBox 
-                 label="Date d'Exécution" 
-                 type="date" 
-                 value={formData.date} 
-                 onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
-               />
+            {/* Left Column - Summary & Visual */}
+            <div className="lg:w-1/3 flex flex-col items-center space-y-8">
+              <div className="w-48 h-48 rounded-[3rem] bg-gradient-to-br from-red-900/50 to-black border-2 border-red-600/40 shadow-xl flex items-center justify-center overflow-hidden group">
+                 <span className="text-7xl group-hover:scale-110 transition-transform duration-500">💸</span>
+              </div>
+              <div className="w-full space-y-6">
+                 <SectionBox title="Récapitulatif" icon="📊">
+                    <div className="space-y-4">
+                       <DetailBox label="Désignation" value={formData.name || 'En attente...'} />
+                       <DetailBox label="Valeur Totale" value={`${(formData.cost || 0).toLocaleString()} DA`} color="blue" />
+                    </div>
+                 </SectionBox>
+              </div>
             </div>
 
-            <div className="space-y-4">
-              <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Observations / Notes</label>
-              <textarea 
-                value={formData.note || ''} 
-                onChange={e => setFormData({ ...formData, note: e.target.value })} 
-                className="w-full bg-red-950/30 border-2 border-red-600/20 px-8 py-6 rounded-[1.5rem] outline-none focus:border-red-600/60 font-black text-red-100 transition-all min-h-[120px]" 
-                placeholder="Détails supplémentaires..."
-              />
+            {/* Right Column - Form Fields */}
+            <div className="lg:w-2/3 space-y-8">
+              <SectionBox title="Paramètres de la Charge" icon="💰">
+                <div className="space-y-6">
+                  <FormField 
+                    label="Désignation de la Charge" 
+                    name="name"
+                    value={formData.name} 
+                    onChange={(e: any) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Loyer, Electricité, Papeterie..."
+                    icon="📝"
+                  />
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     <FormField 
+                       label="Montant de la Charge (DA)" 
+                       name="cost"
+                       type="number" 
+                       value={formData.cost} 
+                       onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
+                       icon="💵"
+                     />
+                     <FormField 
+                       label="Date d'Exécution" 
+                       name="date"
+                       type="date" 
+                       value={formData.date} 
+                       onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
+                       icon="📅"
+                     />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Observations / Notes</label>
+                    <textarea 
+                      value={formData.note || ''} 
+                      onChange={e => setFormData({ ...formData, note: e.target.value })} 
+                      className="w-full bg-slate-900/30 border border-red-600/30 px-6 py-4 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 transition-all min-h-[150px] shadow-sm" 
+                      placeholder="Détails techniques ou administratifs supplémentaires..."
+                    />
+                  </div>
+                </div>
+              </SectionBox>
             </div>
           </div>
-
         </div>
 
-        <div className="p-10 border-t border-red-600/20 bg-black/40 flex gap-6">
-          <button onClick={onClose} className="flex-1 py-4 bg-red-950/30 border border-red-600/30 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400/70 hover:bg-red-600/20 transition-all">
+        {/* Footer */}
+        <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex items-center justify-center gap-4 shrink-0 flex-wrap">
+          <button onClick={onClose} className="px-8 py-3 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-xl hover:bg-slate-900/70 transition-all uppercase tracking-wider text-sm">
             Annuler
           </button>
           <button 
             onClick={() => onSubmit(formData)} 
-            className="flex-[2] relative group overflow-hidden py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300"
+            className="relative group overflow-hidden px-12 py-3 font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
             <span className="relative z-10 text-white flex items-center justify-center gap-3">
-              <span>💾</span> Enregistrer
+              <span>💾</span> Enregistrer Charge
             </span>
           </button>
         </div>
-
       </div>
     </div>
   );
 };
+
 
 const VehicleExpenseForm: React.FC<{ 
   lang: Language; 
@@ -870,173 +915,189 @@ const VehicleExpenseForm: React.FC<{
   };
 
   return (
-    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-in fade-in" onClick={onClose}></div>
-      <div className="relative bg-[#020617] w-full max-w-3xl rounded-[3rem] shadow-2xl animate-in zoom-in-95 overflow-hidden border border-red-600/30 flex flex-col">
+    <div className="fixed inset-0 z-[130] flex items-center justify-center p-4 animate-in fade-in">
+      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl" onClick={onClose}></div>
+      <div className="relative glass-card w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[3rem] shadow-2xl shadow-red-600/40 border border-red-600/40 flex flex-col animate-in zoom-in-95">
         
         {/* Header */}
-        <div className="bg-gradient-to-r from-red-950 via-slate-900 to-black p-10 border-b border-red-600/30 shrink-0">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center gap-6">
-              <div className="h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center text-3xl shadow-lg border border-red-400/30">
-                🚗
-              </div>
-              <div>
-                <h3 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-400 uppercase tracking-tight">
-                  {initialData ? 'Modifier Maintenance' : 'Maintenance Véhicule'}
-                </h3>
-                <p className="text-[10px] font-black text-red-500/50 uppercase tracking-[0.3em] mt-1">Optimisation de l'Actif Roulant</p>
-              </div>
+        <div className="px-6 md:px-8 py-8 flex items-center justify-between bg-gradient-to-r from-red-950/90 to-slate-900/90 border-b border-red-600/40 shrink-0 sticky top-0">
+          <div className="flex items-center gap-6">
+            <div className="h-14 w-14 rounded-full bg-red-600/30 text-red-300 flex items-center justify-center text-2xl border border-red-600/40">
+              🚗
             </div>
-            <button onClick={onClose} className="h-12 w-12 bg-red-950/50 border border-red-600/30 rounded-full flex items-center justify-center text-red-400/70 hover:bg-red-600/20 transition-all hover:scale-110 active:scale-90">✕</button>
+            <div>
+              <h2 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-300 to-red-500">
+                {initialData ? 'Modifier Maintenance' : 'Maintenance Véhicule'}
+              </h2>
+              <p className="text-xs font-black text-red-400/70 uppercase tracking-widest mt-1">Optimisation de l'Actif Roulant</p>
+            </div>
+          </div>
+          <button onClick={onClose} className="h-10 w-10 relative group overflow-hidden rounded-full font-black flex items-center justify-center text-lg transition-all duration-300 flex-shrink-0">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="relative z-10 text-white">✕</div>
+          </button>
+        </div>
+
+        <div className="flex-grow overflow-y-auto custom-scrollbar px-6 md:px-8 pb-8">
+          <div className="flex flex-col lg:flex-row gap-8 py-8">
+            
+            {/* Left Column - Category Selection */}
+            <div className="lg:w-1/3 space-y-8">
+              <SectionBox title="Identification de l'Unité" icon="🚗">
+                 <div className="space-y-4 relative">
+                    <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Ciblage du Véhicule</label>
+                    <button 
+                      onClick={() => setShowVehicleSearch(!showVehicleSearch)}
+                      className="w-full bg-slate-900/30 border border-red-600/30 p-4 rounded-xl outline-none font-black text-left text-red-200 hover:border-red-600/50 transition-all flex items-center justify-between group/select"
+                    >
+                      <span className="tracking-tight italic text-sm">{selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plate})` : 'Rechercher une unité...'}</span>
+                      <span className="text-red-600/40 group-hover/select:translate-y-1 transition-transform">▼</span>
+                    </button>
+                    
+                    {showVehicleSearch && (
+                      <div className="absolute top-full left-0 right-0 mt-2 bg-slate-950 border border-red-600/30 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2">
+                        <input
+                          type="text"
+                          placeholder="Plaque, Modèle, Marque..."
+                          value={searchQuery}
+                          onChange={e => setSearchQuery(e.target.value)}
+                          className="w-full bg-red-600/5 border-b border-red-600/20 p-4 outline-none font-black text-red-100 placeholder:text-red-400/20"
+                          autoFocus
+                        />
+                        <div className="max-h-64 overflow-y-auto custom-scrollbar">
+                          {filteredVehicles.length > 0 ? (
+                            filteredVehicles.map(v => (
+                              <button
+                                key={v.id}
+                                onClick={() => handleSelectVehicle(v)}
+                                className="w-full text-left px-6 py-4 border-b border-red-600/10 hover:bg-red-600/10 transition-all flex justify-between items-center group/item"
+                              >
+                                <div>
+                                   <p className="text-red-100 font-black text-sm tracking-tight">{v.make} {v.model}</p>
+                                   <p className="text-[10px] text-red-400/50 font-black uppercase tracking-widest italic">{v.plate}</p>
+                                </div>
+                                <span className="text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity">→</span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="p-6 text-red-400/30 text-center font-black uppercase text-[10px] tracking-widest italic">Aucun résultat trouvé</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                 </div>
+              </SectionBox>
+
+              <SectionBox title="Classification" icon="🔍">
+                 <div className="grid grid-cols-2 gap-3">
+                    {[
+                      { id: 'vidange', icon: '🛢️', label: 'Vidange' },
+                      { id: 'assurance', icon: '🛡️', label: 'Assurance' },
+                      { id: 'controle', icon: '🛠️', label: 'Contrôle' },
+                      { id: 'chaine', icon: '⛓️', label: 'Chaîne' },
+                      { id: 'autre', icon: '❓', label: 'Autre' }
+                    ].map(cat => (
+                      <button
+                        key={cat.id}
+                        onClick={() => setExpenseCategory(cat.id as any)}
+                        className={`flex flex-col items-center justify-center p-4 rounded-2xl border transition-all duration-300 group/cat ${
+                          expenseCategory === cat.id 
+                            ? 'border-red-600 bg-red-600/20 shadow-lg shadow-red-600/20 scale-105' 
+                            : 'border-red-600/10 bg-slate-900/30 hover:border-red-600/30 hover:bg-red-600/5'
+                        }`}
+                      >
+                        <span className="text-2xl mb-2 group-hover/cat:scale-110 transition-transform">{cat.icon}</span>
+                        <span className={`text-[9px] font-black uppercase tracking-widest ${expenseCategory === cat.id ? 'text-red-100' : 'text-red-400/40'}`}>{cat.label}</span>
+                      </button>
+                    ))}
+                 </div>
+              </SectionBox>
+            </div>
+
+            {/* Right Column - Parameters */}
+            <div className="lg:w-2/3 space-y-8">
+              <SectionBox title="Paramètres d'Exécution" icon="⚙️">
+                 <div className="space-y-6">
+                    {expenseCategory === 'autre' && (
+                      <FormField 
+                        label="Désignation de la charge" 
+                        name="name"
+                        value={formData.name} 
+                        onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} 
+                        placeholder="Ex: Lavage, Pneus, Réparation..."
+                        icon="✍️"
+                      />
+                    )}
+
+                    {(expenseCategory === 'vidange' || expenseCategory === 'chaine') && (
+                      <div className="bg-red-600/5 border border-red-600/20 p-6 rounded-2xl animate-in fade-in zoom-in-95">
+                         <FormField 
+                           label="Kilométrage Actuel (KM)" 
+                           name="mileage"
+                           type="number" 
+                           value={currentMileage} 
+                           onChange={(e: any) => setCurrentMileage(Number(e.target.value))} 
+                           icon="📏"
+                         />
+                         <p className="text-[10px] text-red-400/50 font-black uppercase tracking-widest mt-4 italic ml-2 leading-relaxed">
+                           ⚠️ La mise à jour synchronisera l'odomètre du véhicule.
+                         </p>
+                      </div>
+                    )}
+
+                    {(expenseCategory === 'assurance' || expenseCategory === 'controle') && (
+                      <FormField 
+                        label="Date d'Échéance (Expiration)" 
+                        name="expiry"
+                        type="date" 
+                        value={expiryDate} 
+                        onChange={(e: any) => setExpiryDate(e.target.value)} 
+                        icon="📅"
+                      />
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                       <FormField 
+                         label="Coût de l'Opération (DA)" 
+                         name="cost"
+                         type="number" 
+                         value={formData.cost} 
+                         onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
+                         icon="💰"
+                       />
+                       <FormField 
+                         label="Date de Facturation" 
+                         name="date"
+                         type="date" 
+                         value={formData.date} 
+                         onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
+                         icon="📅"
+                       />
+                    </div>
+
+                     <div className="space-y-2">
+                      <label className="block text-xs font-black text-red-400/70 uppercase tracking-widest ml-2">Observations (Note)</label>
+                      <textarea 
+                        value={formData.note} 
+                        onChange={e => setFormData({ ...formData, note: e.target.value })} 
+                        className="w-full bg-slate-900/30 border border-red-600/30 px-6 py-4 rounded-[1.25rem] outline-none focus:ring-2 focus:ring-red-500 focus:border-red-600 font-black text-red-200 transition-all min-h-[100px] shadow-sm" 
+                        placeholder="Détails techniques..."
+                      />
+                    </div>
+                  </div>
+              </SectionBox>
+            </div>
           </div>
         </div>
 
-        <div className="p-10 space-y-8 overflow-y-auto custom-scrollbar">
-
-
-
-          {/* Vehicle Selection Section */}
-          <SectionBox title="Identification de l'Unité" icon="🚗">
-             <div className="space-y-6 relative">
-                <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Ciblage du Véhicule</label>
-                <button 
-                  onClick={() => setShowVehicleSearch(!showVehicleSearch)}
-                  className="w-full bg-red-950/30 border-2 border-red-600/20 p-6 rounded-2xl outline-none font-black text-left text-red-100 hover:border-red-600/40 transition-all flex items-center justify-between group/select"
-                >
-                  <span className="tracking-tight italic text-sm">{selectedVehicle ? `${selectedVehicle.make} ${selectedVehicle.model} (${selectedVehicle.plate})` : 'Rechercher une unité...'}</span>
-                  <span className="text-red-600/40 group-hover/select:translate-y-1 transition-transform">▼</span>
-                </button>
-                
-                {showVehicleSearch && (
-                  <div className="absolute top-full left-0 right-0 mt-4 bg-slate-950 border-2 border-red-600/30 rounded-[3rem] shadow-[0_30px_60px_rgba(0,0,0,0.5)] z-50 overflow-hidden animate-in slide-in-from-top-4">
-                    <input
-                      type="text"
-                      placeholder="Plaque, Modèle, Marque..."
-                      value={searchQuery}
-                      onChange={e => setSearchQuery(e.target.value)}
-                      className="w-full bg-red-600/[0.05] border-b border-red-600/20 p-8 outline-none font-black text-red-100 placeholder:text-red-400/20"
-                      autoFocus
-                    />
-                    <div className="max-h-64 overflow-y-auto custom-scrollbar">
-                      {filteredVehicles.length > 0 ? (
-                        filteredVehicles.map(v => (
-                          <button
-                            key={v.id}
-                            onClick={() => handleSelectVehicle(v)}
-                            className="w-full text-left px-10 py-6 border-b border-red-600/10 hover:bg-red-600/10 transition-all flex justify-between items-center group/item"
-                          >
-                            <div>
-                               <p className="text-red-100 font-black text-lg tracking-tight">{v.make} {v.model}</p>
-                               <p className="text-[10px] text-red-400/50 font-black uppercase tracking-widest italic">{v.plate}</p>
-                            </div>
-                            <span className="text-red-600 opacity-0 group-hover/item:opacity-100 transition-opacity">→</span>
-                          </button>
-                        ))
-                      ) : (
-                        <p className="p-10 text-red-400/30 text-center font-black uppercase text-xs tracking-widest italic">Aucun résultat cryptographique</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-             </div>
-          </SectionBox>
-
-          {/* Category Selection */}
-          <SectionBox title="Classification de Charge" icon="🔍">
-             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                {[
-                  { id: 'vidange', icon: '🛢️', label: 'Vidange' },
-                  { id: 'assurance', icon: '🛡️', label: 'Assurance' },
-                  { id: 'controle', icon: '🛠️', label: 'Contrôle' },
-                  { id: 'chaine', icon: '⛓️', label: 'Chaîne' },
-                  { id: 'autre', icon: '❓', label: 'Autre' }
-                ].map(cat => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setExpenseCategory(cat.id as any)}
-                    className={`flex flex-col items-center justify-center p-6 rounded-[2.2rem] border-2 transition-all duration-500 group/cat ${
-                      expenseCategory === cat.id 
-                        ? 'border-red-600 bg-red-600/10 shadow-[0_0_30px_rgba(220,38,38,0.2)] scale-105' 
-                        : 'border-red-600/10 bg-red-600/[0.02] hover:border-red-600/30 hover:bg-red-600/5'
-                    }`}
-                  >
-                    <span className="text-3xl mb-3 group-hover/cat:scale-110 transition-transform">{cat.icon}</span>
-                    <span className={`text-[9px] font-black uppercase tracking-widest ${expenseCategory === cat.id ? 'text-red-100' : 'text-red-400/40'}`}>{cat.label}</span>
-                  </button>
-                ))}
-             </div>
-          </SectionBox>
-
-          {/* Dynamic Details */}
-          <SectionBox title="Paramètres d'Exécution" icon="⚙️">
-             <div className="space-y-8">
-                {expenseCategory === 'autre' && (
-                  <FieldBox 
-                    label="Désignation" 
-                    value={formData.name} 
-                    onChange={(e: any) => setFormData({ ...formData, name: e.target.value })} 
-                    placeholder="Ex: Lavage, Pneus, Réparation..."
-                  />
-                )}
-
-                {(expenseCategory === 'vidange' || expenseCategory === 'chaine') && (
-                  <div className="bg-red-600/[0.02] border border-red-600/20 p-8 rounded-[3rem] animate-in fade-in zoom-in-95">
-                     <FieldBox 
-                       label="Kilométrage Actuel (KM)" 
-                       type="number" 
-                       value={currentMileage} 
-                       onChange={(e: any) => setCurrentMileage(Number(e.target.value))} 
-                     />
-                     <p className="text-[9px] text-red-400/40 font-black uppercase tracking-widest mt-6 italic ml-6 leading-relaxed">⚠️ La mise à jour de ce champ synchronisera automatiquement l'odomètre du véhicule.</p>
-                  </div>
-                )}
-
-                {(expenseCategory === 'assurance' || expenseCategory === 'controle') && (
-                  <FieldBox 
-                    label="Date d'Échéance (Expiration)" 
-                    type="date" 
-                    value={expiryDate} 
-                    onChange={(e: any) => setExpiryDate(e.target.value)} 
-                  />
-                )}
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                   <FieldBox 
-                     label="Coût de l'Opération (DA)" 
-                     type="number" 
-                     value={formData.cost} 
-                     onChange={(e: any) => setFormData({ ...formData, cost: Number(e.target.value) })} 
-                   />
-                   <FieldBox 
-                     label="Date de Facturation" 
-                     type="date" 
-                     value={formData.date} 
-                     onChange={(e: any) => setFormData({ ...formData, date: e.target.value })} 
-                   />
-                </div>
-
-                 <div className="space-y-4">
-                  <label className="block text-[10px] font-black text-red-400/50 uppercase tracking-[0.3em] ml-6">Observations (Note)</label>
-                  <textarea 
-                    value={formData.note} 
-                    onChange={e => setFormData({ ...formData, note: e.target.value })} 
-                    className="w-full bg-red-950/30 border-2 border-red-600/20 px-8 py-6 rounded-[1.5rem] outline-none focus:border-red-600/60 font-black text-red-100 transition-all min-h-[100px]" 
-                    placeholder="Détails techniques optionnels..."
-                  />
-                </div>
-              </div>
-
-          </SectionBox>
-        </div>
-
-        <div className="p-10 border-t border-red-600/20 bg-black/40 flex gap-6">
-          <button onClick={onClose} className="flex-1 py-4 bg-red-950/30 border border-red-600/30 rounded-xl font-black text-[10px] uppercase tracking-widest text-red-400/70 hover:bg-red-600/20 transition-all">
+        {/* Modal Footer */}
+        <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-red-950/50 to-slate-900/50 border-t border-red-600/40 flex items-center justify-center gap-4 shrink-0 flex-wrap">
+          <button onClick={onClose} className="px-8 py-3 bg-slate-900/50 border border-red-600/40 text-red-400 font-black rounded-xl hover:bg-slate-900/70 transition-all uppercase tracking-wider text-sm">
             Annuler
           </button>
           <button 
             onClick={handleSubmit} 
-            className="flex-[2] relative group overflow-hidden py-4 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300"
+            className="relative group overflow-hidden px-12 py-3 font-black rounded-xl transition-all duration-300 uppercase tracking-wider text-sm"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
@@ -1045,7 +1106,6 @@ const VehicleExpenseForm: React.FC<{
             </span>
           </button>
         </div>
-
       </div>
     </div>
   );

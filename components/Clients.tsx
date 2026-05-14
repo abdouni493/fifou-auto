@@ -582,28 +582,28 @@ export const ClientForm: React.FC<{ onClose: () => void, onSubmit: (data: any) =
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-md" onClick={onClose}></div>
-      <div className="relative bg-white w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[4rem] shadow-2xl flex flex-col animate-in zoom-in-95 border border-red-600/30">
+      <div className="relative glass-card w-full max-w-6xl h-full max-h-[90vh] overflow-hidden rounded-[4rem] shadow-2xl flex flex-col animate-in zoom-in-95 border border-red-600/40 bg-gradient-to-b from-red-950/90 to-slate-950/90">
         
-        <div className="px-12 py-8 flex items-center justify-between bg-white shrink-0 border-b border-slate-50">
+        <div className="px-12 py-8 flex items-center justify-between bg-gradient-to-r from-red-950 to-slate-900 shrink-0 border-b border-red-600/20">
           <div className="flex items-center gap-6">
-            <div className="h-16 w-16 rounded-2xl bg-blue-600 text-white flex items-center justify-center text-4xl shadow-xl">👥</div>
+            <div className="h-16 w-16 rounded-2xl bg-red-600/30 border border-red-600/40 text-red-100 flex items-center justify-center text-4xl shadow-xl">👥</div>
             <div>
-              <h2 className="text-4xl font-black text-red-100 tracking-tight">{initialData ? "Modifier Client" : "Nouveau Client"}</h2>
+              <h2 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-red-200 to-red-500 tracking-tight">{initialData ? "Modifier Client" : "Nouveau Client"}</h2>
               <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-1">Dossier Client</p>
             </div>
           </div>
-          <button onClick={onClose} className="h-14 w-14 glass-card border border-red-600/30 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-400/70">✕</button>
+          <button onClick={onClose} className="h-14 w-14 glass-card border border-red-600/40 rounded-full flex items-center justify-center text-2xl hover:bg-red-600/20 text-red-100 transition-all">✕</button>
         </div>
 
-        <div className="flex-grow overflow-y-auto custom-scrollbar bg-slate-50/30 p-12">
+        <div className="flex-grow overflow-y-auto custom-scrollbar bg-slate-950/20 p-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             
             <div className="lg:col-span-4 flex flex-col items-center">
               <div className="relative group mt-10">
-                <div className="w-56 h-56 rounded-[4.5rem] bg-white border-4 border-red-600/30 shadow-xl flex items-center justify-center overflow-hidden">
+                <div className="w-56 h-56 rounded-[4.5rem] bg-slate-900 border-4 border-red-600/30 shadow-xl flex items-center justify-center overflow-hidden">
                    {formData.photo_url ? <img src={formData.photo_url} className="w-full h-full object-cover" /> : <span className="text-[8rem] opacity-5">👤</span>}
                 </div>
-                <label className="absolute bottom-4 right-4 h-14 w-14 rounded-2xl bg-slate-900 text-white flex items-center justify-center cursor-pointer hover:bg-blue-600 shadow-2xl transition-all">
+                <label className="absolute bottom-4 right-4 h-14 w-14 rounded-2xl bg-red-600 text-white flex items-center justify-center cursor-pointer hover:bg-red-700 shadow-2xl transition-all">
                   <input type="file" className="hidden" accept="image/*" onChange={handlePhoto} />
                   <span className="text-2xl">📷</span>
                 </label>
@@ -623,8 +623,8 @@ export const ClientForm: React.FC<{ onClose: () => void, onSubmit: (data: any) =
                      <div className="space-y-4">
                         <label className="block text-[10px] font-black text-red-400/70 uppercase tracking-widest ml-4">Genre</label>
                         <div className="flex gap-4">
-                           <button type="button" onClick={() => setFormData({...formData, gender: 'M'})} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${formData.gender === 'M' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-red-400/70 border border-red-600/20'}`}>Homme</button>
-                           <button type="button" onClick={() => setFormData({...formData, gender: 'F'})} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${formData.gender === 'F' ? 'bg-pink-600 text-white shadow-lg' : 'bg-white text-red-400/70 border border-red-600/20'}`}>Femme</button>
+                           <button type="button" onClick={() => setFormData({...formData, gender: 'M'})} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${formData.gender === 'M' ? 'bg-red-600 text-white shadow-lg' : 'bg-slate-900/50 text-red-400/70 border border-red-600/20'}`}>Homme</button>
+                           <button type="button" onClick={() => setFormData({...formData, gender: 'F'})} className={`flex-1 py-4 rounded-2xl font-black text-sm transition-all ${formData.gender === 'F' ? 'bg-pink-600 text-white shadow-lg' : 'bg-slate-900/50 text-red-400/70 border border-red-600/20'}`}>Femme</button>
                         </div>
                      </div>
                   </div>
@@ -649,13 +649,13 @@ export const ClientForm: React.FC<{ onClose: () => void, onSubmit: (data: any) =
                             name="doc_type" 
                             value={formData.doc_type} 
                             onChange={(e:any) => setFormData({...formData, doc_type: e.target.value})}
-                            className="w-full bg-slate-50 border border-red-600/20 px-8 py-5 rounded-[2.2rem] outline-none focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-red-600 font-black text-red-100 transition-all text-xl tracking-tight appearance-none cursor-pointer"
+                            className="w-full bg-slate-900/50 border border-red-600/20 px-8 py-5 rounded-[2.2rem] outline-none focus:ring-4 focus:ring-red-600/10 focus:bg-slate-900 focus:border-red-600 font-black text-red-100 transition-all text-xl tracking-tight appearance-none cursor-pointer"
                           >
-                            <option value="ID">Carte d'Identité (ID)</option>
-                            <option value="Permis">Permis de Conduire</option>
-                            <option value="Passport">Passeport</option>
+                            <option value="ID" className="bg-slate-900">Carte d'Identité (ID)</option>
+                            <option value="Permis" className="bg-slate-900">Permis de Conduire</option>
+                            <option value="Passport" className="bg-slate-900">Passeport</option>
                           </select>
-                          <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none opacity-20 group-focus-within/field:opacity-100 transition-all text-sm font-black">
+                          <div className="absolute right-8 top-1/2 -translate-y-1/2 pointer-events-none opacity-20 group-focus-within/field:opacity-100 transition-all text-sm font-black text-red-400">
                              ▼
                           </div>
                         </div>
@@ -678,9 +678,17 @@ export const ClientForm: React.FC<{ onClose: () => void, onSubmit: (data: any) =
           </div>
         </div>
 
-        <div className="px-12 py-10 bg-white border-t border-slate-50 flex items-center justify-center gap-8 shrink-0">
-          <button onClick={onClose} className="px-16 py-5 glass-card border border-red-600/30 rounded-[2.5rem] font-black text-[11px] uppercase tracking-widest text-red-400/70 hover:bg-slate-50 transition-all">Annuler</button>
-          <button onClick={() => onSubmit(formData)} className="custom-gradient-btn px-24 py-5 rounded-[2.5rem] text-white font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all">Enregistrer le client</button>
+        <div className="px-12 py-10 bg-gradient-to-r from-red-950 to-slate-900 border-t border-red-600/20 flex items-center justify-center gap-8 shrink-0">
+          <button onClick={onClose} className="px-16 py-5 glass-card border border-red-600/40 rounded-[2.5rem] font-black text-[11px] uppercase tracking-widest text-red-100 hover:bg-red-600/20 transition-all">Annuler</button>
+          <button onClick={() => onSubmit(formData)} className="relative group overflow-hidden px-24 py-5 font-black rounded-[2.5rem] transition-all duration-300 uppercase tracking-widest text-[11px] shadow-xl active:scale-95">
+            <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
+            <div className="absolute -inset-1 bg-gradient-to-r from-red-700 via-red-500 to-red-700 rounded-[2.5rem] blur-lg opacity-0 group-hover:opacity-60 transition-opacity duration-300 -z-10 group-hover:animate-pulse"></div>
+            <div className="relative z-10 flex items-center justify-center gap-3 text-white">
+              <span className="transition-all duration-300 group-hover:scale-125">✅</span>
+              <span className="transition-all duration-300 group-hover:tracking-[0.2em]">Enregistrer le client</span>
+            </div>
+          </button>
         </div>
       </div>
     </div>
@@ -689,10 +697,10 @@ export const ClientForm: React.FC<{ onClose: () => void, onSubmit: (data: any) =
 
 // --- Helpers de style ---
 const SectionBox: React.FC<{ title: string, icon: string, children: React.ReactNode }> = ({ title, icon, children }) => (
-  <div className="glass-card rounded-[3.5rem] p-10 space-y-8 border border-red-600/20/50 shadow-sm">
+  <div className="glass-card rounded-[3.5rem] p-10 space-y-8 border border-red-600/20 shadow-sm bg-slate-900/40">
     <div className="flex items-center gap-6">
-       <div className="h-12 w-12 rounded-2xl bg-slate-50 text-red-100 flex items-center justify-center text-2xl shadow-inner">{icon}</div>
-       <h4 className="text-xl font-black text-red-100 tracking-tight">{title}</h4>
+       <div className="h-12 w-12 rounded-2xl bg-red-600/20 border border-red-600/40 text-red-100 flex items-center justify-center text-2xl shadow-inner">{icon}</div>
+       <h4 className="text-xl font-black text-red-100 tracking-tight uppercase tracking-widest">{title}</h4>
     </div>
     <div>{children}</div>
   </div>
@@ -709,15 +717,15 @@ const FormField: React.FC<{ label: string, name: string, value?: any, onChange?:
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className={`w-full bg-slate-50 border border-red-600/20 ${icon ? 'pl-18' : 'px-8'} py-5 rounded-[2.2rem] outline-none focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-red-600 font-black text-red-100 transition-all text-xl tracking-tight ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+        className={`w-full bg-slate-900/50 border border-red-600/20 ${icon ? 'pl-18' : 'px-8'} py-5 rounded-[2.2rem] outline-none focus:ring-4 focus:ring-red-600/10 focus:bg-slate-900 focus:border-red-600 font-black text-red-100 transition-all text-xl tracking-tight ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       />
     </div>
   </div>
 );
 
 const InfoRow = ({ label, value, icon }: any) => (
-  <div className="flex items-center gap-6 p-5 rounded-[2rem] hover:bg-slate-50 transition-colors group">
-    <div className="h-14 w-14 rounded-2xl bg-slate-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">{icon}</div>
+  <div className="flex items-center gap-6 p-5 rounded-[2rem] hover:bg-red-600/10 transition-colors group">
+    <div className="h-14 w-14 rounded-2xl bg-red-600/20 border border-red-600/40 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">{icon}</div>
     <div className="overflow-hidden">
       <p className="text-[10px] font-black text-red-400/70 uppercase tracking-widest">{label}</p>
       <p className="text-lg font-bold text-red-100 tracking-tight mt-1 truncate">{value || '---'}</p>
@@ -731,5 +739,3 @@ const StatSmall = ({ label, value }: any) => (
     <p className="text-sm font-black text-red-100 truncate">{value || 'N/A'}</p>
   </div>
 );
-
-
