@@ -13,21 +13,11 @@ interface LoginProps {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin, lang, showroomLogo, showroomName, showroomSlogan }) => {
-  const [mode, setMode] = useState<'login' | 'setup'>('login');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  
-  // Admin setup form states
-  const [adminForm, setAdminForm] = useState({
-    fullName: '',
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
 
   const t = translations[lang];
 
@@ -143,98 +133,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang, showroomLogo, showr
     }
   };
 
-  const handleAdminSetup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError(null);
-
-    if (!adminForm.fullName || !adminForm.username || !adminForm.email || !adminForm.password) {
-      setError('All fields are required');
-      setIsLoading(false);
-      return;
-    }
-
-    if (adminForm.password !== adminForm.confirmPassword) {
-      setError('Passwords do not match');
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      // Check if username already exists
-      const { data: existing } = await supabase.from('workers').select('id').eq('username', adminForm.username).maybeSingle();
-      if (existing) {
-        setError('Username already exists');
-        setIsLoading(false);
-        return;
-      }
-
-      // Create auth user first
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: adminForm.email,
-        password: adminForm.password,
-        options: {
-          data: {
-            full_name: adminForm.fullName
-          }
-        }
-      });
-
-      if (authError) {
-        setError(authError.message || 'Failed to create account');
-        setIsLoading(false);
-        return;
-      }
-
-      if (!authData.user) {
-        setError('Failed to create account');
-        setIsLoading(false);
-        return;
-      }
-
-      // Create worker profile
-      const { error: insertError } = await supabase.from('workers').insert({
-        id: authData.user.id,
-        fullname: adminForm.fullName,
-        username: adminForm.username,
-        email: adminForm.email,
-        role: 'admin',
-        type: 'admin',
-        amount: 0,
-        payment_type: 'monthly',
-        telephone: '',
-        address: '',
-        permissions: JSON.stringify([])
-      });
-
-      if (insertError) {
-        console.error('Worker insert error:', insertError);
-        // Even if worker creation fails, auth user was created successfully
-        // User can still login, trigger might create worker later
-        setSuccess('Account created! You can now login.');
-        setTimeout(() => {
-          setAdminForm({ fullName: '', username: '', email: '', password: '', confirmPassword: '' });
-          setMode('login');
-          setSuccess(null);
-        }, 3000);
-        setIsLoading(false);
-        return;
-      }
-
-      setSuccess('Admin account created! Please login.');
-      setTimeout(() => {
-        setAdminForm({ fullName: '', username: '', email: '', password: '', confirmPassword: '' });
-        setMode('login');
-        setSuccess(null);
-      }, 3000);
-    } catch (err) {
-      console.error('Setup error:', err);
-      setError('An error occurred during setup');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-black via-red-950 to-black flex items-center justify-center p-4 relative overflow-hidden">
       {/* Premium animated background elements with deeper red */}
@@ -284,30 +182,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang, showroomLogo, showr
             )}
           </div>
 
-          {/* Tabs */}
-          <div className="flex gap-2.5 mb-10 p-2 bg-slate-900/70 border border-red-600/30 rounded-xl backdrop-blur-lg animate-in fade-in duration-500 hover:border-red-600/50 transition-all" style={{ animationDelay: '0.5s' }}>
-            <button
-              onClick={() => { setMode('login'); setError(null); setSuccess(null); }}
-              className={`flex-1 py-3 rounded-lg font-black text-sm transition-all duration-300 uppercase tracking-wider ${
-                mode === 'login'
-                  ? 'bg-gradient-to-r from-red-700 to-red-600 text-white shadow-lg shadow-red-600/50 scale-105 hover:shadow-red-500/60'
-                  : 'text-red-400/70 hover:text-red-400 hover:bg-red-600/15'
-              }`}
-            >
-              🔓 Connexion
-            </button>
-            <button
-              onClick={() => { setMode('setup'); setError(null); setSuccess(null); }}
-              className={`flex-1 py-3 rounded-lg font-black text-sm transition-all duration-300 uppercase tracking-wider ${
-                mode === 'setup'
-                  ? 'bg-gradient-to-r from-red-700 to-red-600 text-white shadow-lg shadow-red-600/50 scale-105 hover:shadow-red-500/60'
-                  : 'text-red-400/70 hover:text-red-400 hover:bg-red-600/15'
-              }`}
-            >
-              ⚙️ Configuration
-            </button>
-          </div>
-
           {/* Error/Success Messages */}
           {error && (
             <div className="mb-6 p-5 bg-red-600/20 border border-red-600/60 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2 backdrop-blur-lg shadow-lg shadow-red-600/20 hover:border-red-600/80 transition-all">
@@ -324,7 +198,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang, showroomLogo, showr
           )}
 
           {/* Login Form */}
-          {mode === 'login' && (
             <form onSubmit={handleSubmit} className="space-y-6 animate-in fade-in duration-500" style={{ animationDelay: '0.6s' }}>
               <div>
                 <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">🔑 Utilisateur ou Email</label>
@@ -386,112 +259,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin, lang, showroomLogo, showr
                 )}
               </button>
             </form>
-          )}
-
-          {/* Setup Form */}
-          {mode === 'setup' && (
-            <form onSubmit={handleAdminSetup} className="space-y-5 animate-in fade-in duration-500" style={{ animationDelay: '0.6s' }}>
-              <div>
-                <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">👤 Nom Complet</label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={adminForm.fullName}
-                    onChange={(e) => setAdminForm({ ...adminForm, fullName: e.target.value })}
-                    placeholder="John Doe"
-                    className="w-full px-5 py-3.5 rounded-xl border border-red-600/40 bg-slate-900/60 text-red-100 placeholder-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all backdrop-blur-md group-hover:border-red-600/60 group-hover:bg-slate-900/80"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">📝 Nom d'utilisateur</label>
-                <div className="relative group">
-                  <input
-                    type="text"
-                    value={adminForm.username}
-                    onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })}
-                    placeholder="johndoe"
-                    className="w-full px-5 py-3.5 rounded-xl border border-red-600/40 bg-slate-900/60 text-red-100 placeholder-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all backdrop-blur-md group-hover:border-red-600/60 group-hover:bg-slate-900/80"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">📧 Email</label>
-                <div className="relative group">
-                  <input
-                    type="email"
-                    value={adminForm.email}
-                    onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })}
-                    placeholder="john@autolux.local"
-                    className="w-full px-5 py-3.5 rounded-xl border border-red-600/40 bg-slate-900/60 text-red-100 placeholder-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all backdrop-blur-md group-hover:border-red-600/60 group-hover:bg-slate-900/80"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">🔒 Mot de passe</label>
-                <div className="relative group">
-                  <input
-                    type="password"
-                    value={adminForm.password}
-                    onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full px-5 py-3.5 rounded-xl border border-red-600/40 bg-slate-900/60 text-red-100 placeholder-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all backdrop-blur-md group-hover:border-red-600/60 group-hover:bg-slate-900/80"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-black text-red-400/90 mb-3 uppercase tracking-wider">🔐 Confirmer Mot de passe</label>
-                <div className="relative group">
-                  <input
-                    type="password"
-                    value={adminForm.confirmPassword}
-                    onChange={(e) => setAdminForm({ ...adminForm, confirmPassword: e.target.value })}
-                    placeholder="••••••••"
-                    className="w-full px-5 py-3.5 rounded-xl border border-red-600/40 bg-slate-900/60 text-red-100 placeholder-red-500/40 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-transparent transition-all backdrop-blur-md group-hover:border-red-600/60 group-hover:bg-slate-900/80"
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full relative group overflow-hidden rounded-xl py-4 font-black uppercase text-sm tracking-widest transition-all duration-300 animate-in fade-in mt-8"
-              >
-                {/* Animated gradient background */}
-                <div className="absolute inset-0 bg-gradient-to-r from-red-800 via-red-600 to-red-800 transition-all duration-300 group-hover:from-red-700 group-hover:via-red-500 group-hover:to-red-700"></div>
-                
-                {/* Dynamic shine effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 animate-pulse" style={{ animationDuration: '2s' }}></div>
-                
-                {/* Enhanced glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-red-700 via-red-500 to-red-700 rounded-xl blur-lg opacity-0 group-hover:opacity-80 transition-opacity duration-300 -z-10 group-hover:animate-pulse"></div>
-                
-                {/* Content with smooth animations */}
-                <div className="relative z-10 flex items-center justify-center gap-3 text-white">
-                  <span className={`text-2xl transition-all duration-300 ${isLoading ? 'animate-spin' : 'group-hover:scale-125 group-hover:animate-bounce'}`}>
-                    {isLoading ? '⏳' : '⚙️'}
-                  </span>
-                  <span className="transition-all duration-300 group-hover:tracking-[0.2em] text-base">
-                    {isLoading ? 'Configuration...' : 'Créer Admin'}
-                  </span>
-                </div>
-                
-                {/* Disabled state overlay */}
-                {(isLoading || !adminForm.fullName || !adminForm.username || !adminForm.email || !adminForm.password) && (
-                  <div className="absolute inset-0 bg-black/50 rounded-xl backdrop-blur-sm"></div>
-                )}
-              </button>
-            </form>
-          )}
 
           {/* Bottom accent line */}
           <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-red-600 to-transparent rounded-b-3xl opacity-50"></div>
