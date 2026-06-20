@@ -144,12 +144,6 @@ export default function Login() {
             {loading ? "..." : t("login.submit")}
           </motion.button>
         </form>
-
-        <motion.div className="flex items-center gap-3 my-5" {...fieldAnim(0.94)}>
-          <div className="flex-1 h-px bg-red-600/20" />
-          <span className="text-[0.6rem] text-text-muted uppercase">{t("login.or")}</span>
-          <div className="flex-1 h-px bg-red-600/20" />
-        </motion.div>
       </motion.div>
     </div>
   );
