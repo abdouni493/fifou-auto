@@ -1,20 +1,9 @@
 {
-  "buildCommand": "npm run build --prefix frontend && npm run build --prefix backend",
-  "devCommand": "npm run dev --prefix frontend",
-  "installCommand": "npm install --prefix frontend && npm install --prefix backend",
-  "framework": null,
+  "buildCommand": "npm run build --prefix frontend",
+  "installCommand": "npm install --prefix frontend",
   "outputDirectory": "frontend/dist",
-  "trailingSlash": false,
-  "cleanUrls": true,
-  "routes": [
-    {
-      "src": "^/api/(.*)$",
-      "dest": "/backend/$1",
-      "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"]
-    },
-    {
-      "src": "^/((?!api).*)$",
-      "dest": "/index.html"
-    }
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

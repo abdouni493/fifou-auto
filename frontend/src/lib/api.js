@@ -132,7 +132,22 @@ async function mergeProfile(authUser) {
 export const auth = {
   async login(email, password) {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    if (error) {
+      const m = (error.message || "").toLowerCase();
+      // Make the most common production cause actionable: the account simply
+      // doesn't exist in Supabase yet (e.g. an old local/demo account).
+      if (m.includes("invalid login credentials")) {
+        throw new Error(
+          "Email ou mot de passe incorrect. Si vous n'avez pas encore de compte Supabase, créez un compte administrateur ci-dessous."
+        );
+      }
+      if (m.includes("email not confirmed")) {
+        throw new Error(
+          "Email non confirmé. Désactivez « Confirm email » dans Supabase (Authentication → Providers → Email), puis réessayez."
+        );
+      }
+      throw error;
+    }
     return mergeProfile(data.user);
   },
   async register({ fullName, username, email, password }) {
