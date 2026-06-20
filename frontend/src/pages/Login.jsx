@@ -2,9 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { AnimatePresence, motion } from "framer-motion";
-import { Car, Mail, Lock, ExternalLink, User, AtSign } from "lucide-react";
+import { Car, Mail, Lock, ExternalLink } from "lucide-react";
 import { useStore } from "../store/useStore.js";
-import { Modal, Field } from "../components/ui.jsx";
 import AnimatedLogo from "../components/AnimatedLogo.jsx";
 
 function GlowBackground() {
@@ -35,15 +34,12 @@ const fieldAnim = (delay) => ({
 export default function Login() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { login, register, user, settings, loadSettings, language, setLanguage } = useStore();
+  const { login, user, settings, loadSettings, language, setLanguage } = useStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showRegister, setShowRegister] = useState(false);
-  const [reg, setReg] = useState({ fullName: "", username: "", email: "", password: "", confirm: "" });
-  const [regError, setRegError] = useState("");
 
   useEffect(() => {
     loadSettings();
@@ -61,21 +57,6 @@ export default function Login() {
       setError(err.message || "Échec de la connexion");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const doRegister = async (e) => {
-    e?.preventDefault();
-    setRegError("");
-    if (reg.password !== reg.confirm) {
-      setRegError("Les mots de passe ne correspondent pas");
-      return;
-    }
-    try {
-      await register({ fullName: reg.fullName, username: reg.username, email: reg.email, password: reg.password });
-      navigate("/app/dashboard");
-    } catch (err) {
-      setRegError(err.message || "Échec de la création du compte");
     }
   };
 
@@ -169,56 +150,7 @@ export default function Login() {
           <span className="text-[0.6rem] text-text-muted uppercase">{t("login.or")}</span>
           <div className="flex-1 h-px bg-red-600/20" />
         </motion.div>
-
-        <div className="space-y-3">
-          <motion.button
-            onClick={() => setShowRegister(true)}
-            className="w-full text-center text-xs text-text-muted hover:text-text-primary uppercase tracking-wider transition"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.0 }}
-          >
-            {t("login.createAdmin")}
-          </motion.button>
-        </div>
       </motion.div>
-
-      {/* Register modal */}
-      <Modal open={showRegister} onClose={() => setShowRegister(false)} title={t("login.createAdmin")} size="sm"
-        footer={
-          <>
-            <button className="btn-ghost" onClick={() => setShowRegister(false)}>{t("common.cancel")}</button>
-            <button className="btn-primary" onClick={doRegister}>{t("login.register")}</button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <Field label={t("login.fullName")} required>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={15} />
-              <input className="input pl-9" value={reg.fullName} onChange={(e) => setReg({ ...reg, fullName: e.target.value })} />
-            </div>
-          </Field>
-          <Field label={t("login.username")} required>
-            <div className="relative">
-              <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={15} />
-              <input className="input pl-9" value={reg.username} onChange={(e) => setReg({ ...reg, username: e.target.value })} />
-            </div>
-          </Field>
-          <Field label={t("login.email")} required>
-            <input className="input" type="email" value={reg.email} onChange={(e) => setReg({ ...reg, email: e.target.value })} />
-          </Field>
-          <div className="grid grid-cols-2 gap-3">
-            <Field label={t("login.password")} required>
-              <input className="input" type="password" value={reg.password} onChange={(e) => setReg({ ...reg, password: e.target.value })} />
-            </Field>
-            <Field label={t("login.confirmPassword")} required>
-              <input className="input" type="password" value={reg.confirm} onChange={(e) => setReg({ ...reg, confirm: e.target.value })} />
-            </Field>
-          </div>
-          {regError && <p className="text-rose-400 text-sm">{regError}</p>}
-        </div>
-      </Modal>
     </div>
   );
 }
