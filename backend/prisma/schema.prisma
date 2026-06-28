@@ -234,6 +234,9 @@ model WorkerPayment {
   amount      Float
   description String?
   createdAt   DateTime @default(now())
+
+  advances WorkerAdvance[]
+  absences WorkerAbsence[]
 }
 
 model WorkerAdvance {
@@ -243,6 +246,10 @@ model WorkerAdvance {
   amount      Float
   date        DateTime @default(now())
   description String?
+  isPaid      Boolean  @default(false)
+  paidAt      DateTime?
+  paymentId   Int?
+  payment     WorkerPayment? @relation(fields: [paymentId], references: [id])
   createdAt   DateTime @default(now())
 }
 
@@ -253,6 +260,10 @@ model WorkerAbsence {
   date        DateTime @default(now())
   description String?
   cost        Float    @default(0)
+  isPaid      Boolean  @default(false)
+  paidAt      DateTime?
+  paymentId   Int?
+  payment     WorkerPayment? @relation(fields: [paymentId], references: [id])
   createdAt   DateTime @default(now())
 }
 

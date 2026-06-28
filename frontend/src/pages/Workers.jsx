@@ -22,12 +22,14 @@ export default function Workers() {
   const [permWorker, setPermWorker] = useState(null);
   const [perms, setPerms] = useState({});
   const [activeSection, setActiveSection] = useState(null);
-  const [modalKind, setModalKind] = useState(null); // advance | absence | payment
+  const [modalKind, setModalKind] = useState(null); // payment
   const [modalWorker, setModalWorker] = useState(null);
   const [modalData, setModalData] = useState({});
-  const [deleteId, setDeleteId] = useState(null);
   const [showNewRole, setShowNewRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState("");
+  const [transactionEditor, setTransactionEditor] = useState(null);
+  const [transactionForm, setTransactionForm] = useState({ date: toDateInput(new Date()), amount: "", cost: "", description: "" });
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   const createRole = async () => {
     if (!newRoleName.trim()) return;
@@ -75,28 +77,79 @@ export default function Workers() {
 
   const openModal = (kind, w) => {
     setModalKind(kind); setModalWorker(w);
-    setModalData({ date: toDateInput(new Date()), amount: "", description: "", cost: "", month: "" });
+    const pending = payrollCalc(w);
+    setModalData({ date: toDateInput(new Date()), amount: kind === "payment" ? String(pending.net) : "", description: "", cost: "", month: "" });
   };
   const submitModal = async () => {
     const w = modalWorker;
-    if (modalKind === "advance") await workersApi.addAdvance(w.id, { amount: Number(modalData.amount), date: modalData.date, description: modalData.description });
-    if (modalKind === "absence") await workersApi.addAbsence(w.id, { cost: Number(modalData.cost), date: modalData.date, description: modalData.description });
     if (modalKind === "payment") await workersApi.addPayment(w.id, { amount: Number(modalData.amount), date: modalData.date, description: modalData.description, month: modalData.month });
     setModalKind(null); refetch();
   };
 
-  const confirmDelete = async () => { await workersApi.delete(deleteId); setDeleteId(null); refetch(); };
+  const requestDelete = (type, id) => setDeleteTarget({ type, id });
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === "worker") await workersApi.delete(deleteTarget.id);
+    if (deleteTarget.type === "advance") await workersApi.deleteAdvance(deleteTarget.id);
+    if (deleteTarget.type === "absence") await workersApi.deleteAbsence(deleteTarget.id);
+    setDeleteTarget(null); refetch();
+  };
 
   // payroll calculation for payment modal
   const payrollCalc = (w) => {
-    if (!w) return {};
+    if (!w) return { base: 0, absences: [], advances: [], absenceCount: 0, absenceTotal: 0, advanceCount: 0, advanceTotal: 0, net: 0 };
+    const unpaidAbsences = (w.absences || []).filter((x) => !x.isPaid);
+    const unpaidAdvances = (w.advances || []).filter((x) => !x.isPaid);
     const base = w.paymentAmount || 0;
-    const absences = (w.absences || []).reduce((a, x) => a + x.cost, 0);
-    const advances = (w.advances || []).reduce((a, x) => a + x.amount, 0);
-    const net = Math.max(0, base - absences - advances);
-    return { base, absences, advances, net };
+    const absenceTotal = unpaidAbsences.reduce((a, x) => a + (x.cost || 0), 0);
+    const advanceTotal = unpaidAdvances.reduce((a, x) => a + (x.amount || 0), 0);
+    const net = Math.max(0, base - absenceTotal - advanceTotal);
+    return {
+      base,
+      absences: unpaidAbsences,
+      advances: unpaidAdvances,
+      absenceCount: unpaidAbsences.length,
+      absenceTotal,
+      advanceCount: unpaidAdvances.length,
+      advanceTotal,
+      net,
+    };
   };
   const calc = payrollCalc(modalWorker);
+
+  const openTransactionEditor = (kind, worker, item = null) => {
+    setTransactionEditor({ kind, worker, item });
+    setTransactionForm({
+      date: item?.date ? toDateInput(item.date) : toDateInput(new Date()),
+      amount: item?.amount ?? "",
+      cost: item?.cost ?? "",
+      description: item?.description ?? "",
+    });
+  };
+
+  const saveTransaction = async () => {
+    if (!transactionEditor) return;
+    try {
+      const payload = { date: transactionForm.date, description: transactionForm.description };
+      if (transactionEditor.kind === "advance") {
+        if (transactionEditor.item) {
+          await workersApi.updateAdvance(transactionEditor.item.id, { ...payload, amount: Number(transactionForm.amount) || 0 });
+        } else {
+          await workersApi.addAdvance(transactionEditor.worker.id, { ...payload, amount: Number(transactionForm.amount) || 0 });
+        }
+      } else {
+        if (transactionEditor.item) {
+          await workersApi.updateAbsence(transactionEditor.item.id, { ...payload, cost: Number(transactionForm.cost) || 0 });
+        } else {
+          await workersApi.addAbsence(transactionEditor.worker.id, { ...payload, cost: Number(transactionForm.cost) || 0 });
+        }
+      }
+      setTransactionEditor(null);
+      refetch();
+    } catch (e) {
+      alert(e.message || "Erreur lors de l'enregistrement");
+    }
+  };
 
   return (
     <div>
@@ -120,10 +173,10 @@ export default function Workers() {
                   { label: "Voir", icon: Eye, onClick: () => setView(w) },
                   can("workers", "edit") && { label: "Modifier", icon: Pencil, onClick: () => openEdit(w) },
                   can("workers", "edit") && { label: "Permissions", icon: Shield, onClick: () => openPerms(w) },
-                  can("workers", "edit") && { label: "Acompte", icon: Wallet, onClick: () => openModal("advance", w) },
-                  can("workers", "edit") && { label: "Absence", icon: CalendarX, onClick: () => openModal("absence", w) },
+                  can("workers", "edit") && { label: "Acompte", icon: Wallet, onClick: () => openTransactionEditor("advance", w) },
+                  can("workers", "edit") && { label: "Absence", icon: CalendarX, onClick: () => openTransactionEditor("absence", w) },
                   can("workers", "edit") && { label: "Paiement", icon: Banknote, onClick: () => openModal("payment", w) },
-                  can("workers", "delete") && { label: "Supprimer", icon: Trash2, danger: true, onClick: () => setDeleteId(w.id) },
+                  can("workers", "delete") && { label: "Supprimer", icon: Trash2, danger: true, onClick: () => requestDelete("worker", w.id) },
                 ]} />
               </div>
               <p className="text-xs text-text-muted flex items-center gap-1 mb-2"><Phone size={11} /> {w.phone}</p>
@@ -185,14 +238,50 @@ export default function Workers() {
       {/* View */}
       <Modal open={!!view} onClose={() => setView(null)} title={view?.fullName || ""} size="md">
         {view && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="grid grid-cols-2 gap-x-6">
               {Object.entries({ Téléphone: view.phone, "N° CIN": view.idCardNumber, Rôle: view.role?.name, Paiement: PAY_LABELS[view.paymentType], Montant: view.paymentAmount && formatAmount(view.paymentAmount), Début: formatDate(view.startDate) }).map(([k, v]) => <div key={k} className="flex justify-between text-sm border-b border-red-600/10 py-1.5"><span className="text-text-muted">{k}</span><span className="text-text-primary">{v || "—"}</span></div>)}
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <Card className="p-3 text-center"><p className="text-base font-black text-amber-400">{formatAmount((view.advances || []).reduce((a, x) => a + x.amount, 0))}</p><p className="label-caps">Acomptes</p></Card>
-              <Card className="p-3 text-center"><p className="text-base font-black text-rose-400">{formatAmount((view.absences || []).reduce((a, x) => a + x.cost, 0))}</p><p className="label-caps">Absences</p></Card>
-              <Card className="p-3 text-center"><p className="text-base font-black text-emerald-400">{formatAmount((view.payments || []).reduce((a, x) => a + x.amount, 0))}</p><p className="label-caps">Payé</p></Card>
+              <Card className="p-3 text-center"><p className="text-base font-black text-amber-400">{formatAmount((view.advances || []).filter((x) => !x.isPaid).reduce((a, x) => a + (x.amount || 0), 0))}</p><p className="label-caps">Acomptes</p></Card>
+              <Card className="p-3 text-center"><p className="text-base font-black text-rose-400">{formatAmount((view.absences || []).filter((x) => !x.isPaid).reduce((a, x) => a + (x.cost || 0), 0))}</p><p className="label-caps">Absences</p></Card>
+              <Card className="p-3 text-center"><p className="text-base font-black text-emerald-400">{formatAmount((view.payments || []).reduce((a, x) => a + (x.amount || 0), 0))}</p><p className="label-caps">Payé</p></Card>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="heading text-sm text-text-primary">Acomptes en attente</h4>
+                {can("workers", "edit") && <button type="button" className="text-[0.7rem] text-red-400 hover:text-red-300 uppercase tracking-wider font-bold" onClick={() => openTransactionEditor("advance", view)}>+ Ajouter</button>}
+              </div>
+              {payrollCalc(view).advances.length > 0 ? payrollCalc(view).advances.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-lg border border-red-600/10 bg-black/20 p-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">{formatAmount(item.amount || 0)}</p>
+                    <p className="text-xs text-text-muted">{formatDate(item.date)}{item.description ? ` • ${item.description}` : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {can("workers", "edit") && <button type="button" className="rounded-full p-1.5 text-text-muted hover:bg-red-600/10 hover:text-red-400" onClick={() => openTransactionEditor("advance", view, item)}><Pencil size={14} /></button>}
+                    {can("workers", "delete") && <button type="button" className="rounded-full p-1.5 text-text-muted hover:bg-red-600/10 hover:text-red-400" onClick={() => requestDelete("advance", item.id)}><Trash2 size={14} /></button>}
+                  </div>
+                </div>
+              )) : <p className="text-sm text-text-muted">Aucun acompte en attente.</p>}
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="heading text-sm text-text-primary">Absences en attente</h4>
+                {can("workers", "edit") && <button type="button" className="text-[0.7rem] text-red-400 hover:text-red-300 uppercase tracking-wider font-bold" onClick={() => openTransactionEditor("absence", view)}>+ Ajouter</button>}
+              </div>
+              {payrollCalc(view).absences.length > 0 ? payrollCalc(view).absences.map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-lg border border-red-600/10 bg-black/20 p-2.5">
+                  <div>
+                    <p className="text-sm font-semibold text-text-primary">{formatAmount(item.cost || 0)}</p>
+                    <p className="text-xs text-text-muted">{formatDate(item.date)}{item.description ? ` • ${item.description}` : ""}</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {can("workers", "edit") && <button type="button" className="rounded-full p-1.5 text-text-muted hover:bg-red-600/10 hover:text-red-400" onClick={() => openTransactionEditor("absence", view, item)}><Pencil size={14} /></button>}
+                    {can("workers", "delete") && <button type="button" className="rounded-full p-1.5 text-text-muted hover:bg-red-600/10 hover:text-red-400" onClick={() => requestDelete("absence", item.id)}><Trash2 size={14} /></button>}
+                  </div>
+                </div>
+              )) : <p className="text-sm text-text-muted">Aucune absence en attente.</p>}
             </div>
           </div>
         )}
@@ -239,12 +328,40 @@ export default function Workers() {
         footer={<><button className="btn-ghost" onClick={() => setModalKind(null)}>Annuler</button><button className="btn-primary" onClick={submitModal}>Valider</button></>}>
         <div className="space-y-4">
           {modalKind === "payment" && (
-            <Card className="p-3 space-y-1.5 text-sm">
-              <div className="flex justify-between"><span className="text-text-muted">Salaire de base</span><span className="text-text-primary">{formatAmount(calc.base)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Absences</span><span className="text-rose-400">- {formatAmount(calc.absences)}</span></div>
-              <div className="flex justify-between"><span className="text-text-muted">Acomptes déduits</span><span className="text-amber-400">- {formatAmount(calc.advances)}</span></div>
-              <div className="flex justify-between pt-1.5 border-t border-red-600/15 font-black"><span className="text-text-primary">Net à payer</span><span className="text-emerald-400">{formatAmount(calc.net)}</span></div>
-            </Card>
+            <div className="space-y-3">
+              <Card className="p-3 space-y-1.5 text-sm">
+                <div className="flex justify-between"><span className="text-text-muted">Salaire de base</span><span className="text-text-primary">{formatAmount(calc.base)}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">Absences en attente</span><span className="text-rose-400">{calc.absenceCount} • {formatAmount(calc.absenceTotal)}</span></div>
+                <div className="flex justify-between"><span className="text-text-muted">Acomptes en attente</span><span className="text-amber-400">{calc.advanceCount} • {formatAmount(calc.advanceTotal)}</span></div>
+                <div className="flex justify-between pt-1.5 border-t border-red-600/15 font-black"><span className="text-text-primary">Net à payer</span><span className="text-emerald-400">{formatAmount(calc.net)}</span></div>
+              </Card>
+              {calc.absences.length > 0 && (
+                <div className="rounded-lg border border-red-600/10 bg-black/20 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted mb-2">Détails absences</p>
+                  <div className="space-y-2">
+                    {calc.absences.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-sm">
+                        <span className="text-text-primary">{formatDate(item.date)}{item.description ? ` • ${item.description}` : ""}</span>
+                        <span className="text-rose-400">{formatAmount(item.cost || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {calc.advances.length > 0 && (
+                <div className="rounded-lg border border-red-600/10 bg-black/20 p-3">
+                  <p className="text-xs uppercase tracking-[0.2em] text-text-muted mb-2">Détails acomptes</p>
+                  <div className="space-y-2">
+                    {calc.advances.map((item) => (
+                      <div key={item.id} className="flex items-center justify-between text-sm">
+                        <span className="text-text-primary">{formatDate(item.date)}{item.description ? ` • ${item.description}` : ""}</span>
+                        <span className="text-amber-400">{formatAmount(item.amount || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           )}
           <Field label="Date"><input type="date" className="input" value={modalData.date} onChange={(e) => setModalData({ ...modalData, date: e.target.value })} /></Field>
           {modalKind === "absence" ? (
@@ -257,7 +374,21 @@ export default function Workers() {
         </div>
       </Modal>
 
-      <ConfirmModal open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={confirmDelete} />
+      <Modal open={!!transactionEditor} onClose={() => setTransactionEditor(null)}
+        title={transactionEditor?.item ? (transactionEditor.kind === "advance" ? "Modifier l'acompte" : "Modifier l'absence") : (transactionEditor?.kind === "advance" ? "Nouvel acompte" : "Nouvelle absence")} size="sm"
+        footer={<><button className="btn-ghost" onClick={() => setTransactionEditor(null)}>Annuler</button><button className="btn-primary" onClick={saveTransaction}>Enregistrer</button></>}>
+        <div className="space-y-4">
+          <Field label="Date"><input type="date" className="input" value={transactionForm.date} onChange={(e) => setTransactionForm({ ...transactionForm, date: e.target.value })} /></Field>
+          {transactionEditor?.kind === "advance" ? (
+            <Field label="Montant (DA)"><input className="input" type="number" value={transactionForm.amount} onChange={(e) => setTransactionForm({ ...transactionForm, amount: e.target.value })} /></Field>
+          ) : (
+            <Field label="Coût (DA)"><input className="input" type="number" value={transactionForm.cost} onChange={(e) => setTransactionForm({ ...transactionForm, cost: e.target.value })} /></Field>
+          )}
+          <Field label="Description"><input className="input" value={transactionForm.description} onChange={(e) => setTransactionForm({ ...transactionForm, description: e.target.value })} /></Field>
+        </div>
+      </Modal>
+
+      <ConfirmModal open={!!deleteTarget} onClose={() => setDeleteTarget(null)} onConfirm={confirmDelete} title="Confirmer la suppression" message="Cette opération supprimera définitivement l'élément sélectionné." />
     </div>
   );
 }

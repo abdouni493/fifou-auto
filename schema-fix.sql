@@ -125,6 +125,43 @@ ALTER TABLE settings ADD COLUMN IF NOT EXISTS inspection_template JSONB;
 
 
 -- ============================================================
+-- 5. WORKER PAYROLL TRACKING
+-- ============================================================
+ALTER TABLE worker_advances
+  ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS payment_id INT;
+
+ALTER TABLE worker_absences
+  ADD COLUMN IF NOT EXISTS is_paid BOOLEAN DEFAULT false,
+  ADD COLUMN IF NOT EXISTS paid_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS payment_id INT;
+
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'worker_advances_payment_id_fkey'
+  ) THEN
+    ALTER TABLE worker_advances
+      ADD CONSTRAINT worker_advances_payment_id_fkey
+      FOREIGN KEY (payment_id) REFERENCES worker_payments(id) ON DELETE SET NULL;
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'worker_absences_payment_id_fkey'
+  ) THEN
+    ALTER TABLE worker_absences
+      ADD CONSTRAINT worker_absences_payment_id_fkey
+      FOREIGN KEY (payment_id) REFERENCES worker_payments(id) ON DELETE SET NULL;
+  END IF;
+END $$;
+
+
+-- ============================================================
 -- DONE.
 -- After running: register an admin on the login page, then create workers
 -- (toggle "Activer un compte d'accès" + email + password) and set their role

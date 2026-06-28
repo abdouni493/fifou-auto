@@ -281,6 +281,9 @@ CREATE TABLE IF NOT EXISTS worker_advances (
   amount      NUMERIC(12,2) NOT NULL,
   date        DATE NOT NULL,
   description TEXT,
+  is_paid     BOOLEAN DEFAULT false,
+  paid_at     TIMESTAMPTZ,
+  payment_id  INT,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE worker_advances ENABLE ROW LEVEL SECURITY;
@@ -292,6 +295,9 @@ CREATE TABLE IF NOT EXISTS worker_absences (
   cost        NUMERIC(12,2) NOT NULL DEFAULT 0,
   date        DATE NOT NULL,
   description TEXT,
+  is_paid     BOOLEAN DEFAULT false,
+  paid_at     TIMESTAMPTZ,
+  payment_id  INT,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE worker_absences ENABLE ROW LEVEL SECURITY;
@@ -308,6 +314,14 @@ CREATE TABLE IF NOT EXISTS worker_payments (
 );
 ALTER TABLE worker_payments ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "worker_payments: auth all" ON worker_payments FOR ALL USING (auth.role() = 'authenticated');
+
+ALTER TABLE worker_advances
+  ADD CONSTRAINT worker_advances_payment_id_fkey
+  FOREIGN KEY (payment_id) REFERENCES worker_payments(id) ON DELETE SET NULL;
+
+ALTER TABLE worker_absences
+  ADD CONSTRAINT worker_absences_payment_id_fkey
+  FOREIGN KEY (payment_id) REFERENCES worker_payments(id) ON DELETE SET NULL;
 
 
 -- ----------------------------------------------------------

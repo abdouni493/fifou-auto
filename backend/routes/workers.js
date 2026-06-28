@@ -199,6 +199,32 @@ router.post(
   })
 );
 
+// PUT /api/workers/advances/:id
+router.put(
+  "/advances/:id",
+  asyncHandler(async (req, res) => {
+    const { amount, date, description } = req.body;
+    const adv = await prisma.workerAdvance.update({
+      where: { id: Number(req.params.id) },
+      data: {
+        amount: Number(amount) || 0,
+        date: date ? new Date(date) : new Date(),
+        description: description || null,
+      },
+    });
+    res.json(adv);
+  })
+);
+
+// DELETE /api/workers/advances/:id
+router.delete(
+  "/advances/:id",
+  asyncHandler(async (req, res) => {
+    await prisma.workerAdvance.delete({ where: { id: Number(req.params.id) } });
+    res.json({ ok: true });
+  })
+);
+
 // POST /api/workers/:id/absences
 router.post(
   "/:id/absences",
@@ -216,6 +242,32 @@ router.post(
   })
 );
 
+// PUT /api/workers/absences/:id
+router.put(
+  "/absences/:id",
+  asyncHandler(async (req, res) => {
+    const { date, description, cost } = req.body;
+    const abs = await prisma.workerAbsence.update({
+      where: { id: Number(req.params.id) },
+      data: {
+        date: date ? new Date(date) : new Date(),
+        description: description || null,
+        cost: Number(cost) || 0,
+      },
+    });
+    res.json(abs);
+  })
+);
+
+// DELETE /api/workers/absences/:id
+router.delete(
+  "/absences/:id",
+  asyncHandler(async (req, res) => {
+    await prisma.workerAbsence.delete({ where: { id: Number(req.params.id) } });
+    res.json({ ok: true });
+  })
+);
+
 // POST /api/workers/:id/payments
 router.post(
   "/:id/payments",
@@ -230,6 +282,17 @@ router.post(
         description: description || null,
       },
     });
+
+    const paymentDate = date ? new Date(date) : new Date();
+    await prisma.workerAdvance.updateMany({
+      where: { workerId: Number(req.params.id), isPaid: false, date: { lte: paymentDate } },
+      data: { isPaid: true, paidAt: paymentDate, paymentId: pay.id },
+    });
+    await prisma.workerAbsence.updateMany({
+      where: { workerId: Number(req.params.id), isPaid: false, date: { lte: paymentDate } },
+      data: { isPaid: true, paidAt: paymentDate, paymentId: pay.id },
+    });
+
     res.status(201).json(pay);
   })
 );

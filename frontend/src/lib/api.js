@@ -801,6 +801,26 @@ async function createWorkerAuthAccount(email, password, fullName, username) {
   return data.user?.id || null;
 }
 
+async function markWorkerItemsAsPaid(workerId, paymentId, paymentDate) {
+  const [advanceRes, absenceRes] = await Promise.all([
+    supabase
+      .from("worker_advances")
+      .update({ is_paid: true, paid_at: paymentDate, payment_id: paymentId })
+      .eq("worker_id", workerId)
+      .is("is_paid", false)
+      .lte("date", paymentDate),
+    supabase
+      .from("worker_absences")
+      .update({ is_paid: true, paid_at: paymentDate, payment_id: paymentId })
+      .eq("worker_id", workerId)
+      .is("is_paid", false)
+      .lte("date", paymentDate),
+  ]);
+
+  if (advanceRes.error) throw advanceRes.error;
+  if (absenceRes.error) throw absenceRes.error;
+}
+
 export const workersApi = {
   async list() {
     const { data } = await supabase
@@ -873,29 +893,80 @@ export const workersApi = {
     }
   },
   async addAdvance(workerId, payload) {
-    await supabase.from("worker_advances").insert({
+    const { error } = await supabase.from("worker_advances").insert({
       worker_id: workerId,
       amount: Number(payload.amount) || 0,
       date: payload.date,
       description: payload.description,
+      is_paid: false,
+      paid_at: null,
+      payment_id: null,
     });
+    if (error) throw error;
+  },
+  async updateAdvance(id, payload) {
+    const { data, error } = await supabase
+      .from("worker_advances")
+      .update({
+        amount: Number(payload.amount) || 0,
+        date: payload.date,
+        description: payload.description,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
+  },
+  async deleteAdvance(id) {
+    const { error } = await supabase.from("worker_advances").delete().eq("id", id);
+    if (error) throw error;
   },
   async addAbsence(workerId, payload) {
-    await supabase.from("worker_absences").insert({
+    const { error } = await supabase.from("worker_absences").insert({
       worker_id: workerId,
       cost: Number(payload.cost) || 0,
       date: payload.date,
       description: payload.description,
+      is_paid: false,
+      paid_at: null,
+      payment_id: null,
     });
+    if (error) throw error;
+  },
+  async updateAbsence(id, payload) {
+    const { data, error } = await supabase
+      .from("worker_absences")
+      .update({
+        cost: Number(payload.cost) || 0,
+        date: payload.date,
+        description: payload.description,
+      })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return toCamel(data);
+  },
+  async deleteAbsence(id) {
+    const { error } = await supabase.from("worker_absences").delete().eq("id", id);
+    if (error) throw error;
   },
   async addPayment(workerId, payload) {
-    await supabase.from("worker_payments").insert({
-      worker_id: workerId,
-      amount: Number(payload.amount) || 0,
-      date: payload.date,
-      description: payload.description,
-      month: payload.month,
-    });
+    const { data, error } = await supabase
+      .from("worker_payments")
+      .insert({
+        worker_id: workerId,
+        amount: Number(payload.amount) || 0,
+        date: payload.date,
+        description: payload.description,
+        month: payload.month,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    await markWorkerItemsAsPaid(workerId, data.id, payload.date);
+    return toCamel(data);
   },
   async listRoles() {
     const { data } = await supabase.from("worker_roles").select("*").order("name");
