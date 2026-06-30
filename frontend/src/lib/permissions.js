@@ -4,7 +4,7 @@ import { useStore } from "../store/useStore.js";
 // permission map. Order is the sidebar display order.
 export const SECTIONS = [
   "dashboard", "showroom", "purchase", "pos", "sales", "payments",
-  "websiteSettings", "websiteReservations", "suppliers", "clients",
+  "caisse", "websiteSettings", "websiteReservations", "suppliers", "clients",
   "workers", "expenses", "reports", "settings",
 ];
 
@@ -18,6 +18,7 @@ export const ROUTE_SECTION = {
   pos: "pos",
   sales: "sales",
   payments: "payments",
+  caisse: "caisse",
   "website-settings": "websiteSettings",
   "website-reservations": "websiteReservations",
   suppliers: "suppliers",

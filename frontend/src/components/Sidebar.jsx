@@ -6,7 +6,7 @@ import { can } from "../lib/permissions.js";
 import AnimatedLogo from "./AnimatedLogo.jsx";
 import { initials } from "../utils/format.js";
 import {
-  Gauge, CarFront, ShoppingBag, Calculator, Tag, Banknote,
+  Gauge, CarFront, ShoppingBag, Calculator, Tag, Banknote, Vault,
   MonitorSmartphone, CalendarClock, Truck, Contact, Briefcase, CircleDollarSign,
   PieChart, SlidersHorizontal, Car, LogOut, Languages, X,
 } from "lucide-react";
@@ -18,6 +18,7 @@ const NAV = [
   { to: "/app/pos", key: "pos", icon: Calculator },
   { to: "/app/sales", key: "sales", icon: Tag },
   { to: "/app/payments", key: "payments", icon: Banknote },
+  { to: "/app/caisse", key: "caisse", icon: Vault },
   { to: "/app/website-settings", key: "websiteSettings", icon: MonitorSmartphone },
   { to: "/app/website-reservations", key: "websiteReservations", icon: CalendarClock },
   { to: "/app/suppliers", key: "suppliers", icon: Truck },

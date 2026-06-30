@@ -186,6 +186,17 @@ export const auth = {
   async logout() {
     await supabase.auth.signOut();
   },
+  // Re-verify the CURRENT user's password (used to unlock sensitive screens like
+  // the Caisse). Runs on an isolated client so a successful sign-in does NOT
+  // replace / refresh the admin's live session. Returns true / false.
+  async verifyPassword(password) {
+    const { data } = await supabase.auth.getUser();
+    const email = data?.user?.email;
+    if (!email || !password) return false;
+    const tmp = createIsolatedClient();
+    const { error } = await tmp.auth.signInWithPassword({ email, password });
+    return !error;
+  },
   async getUser() {
     const { data } = await supabase.auth.getUser();
     return mergeProfile(data.user);
@@ -1028,6 +1039,91 @@ export const expensesApi = {
   },
 };
 
+// ── CAISSE (cash register: deposits / withdrawals) ────────────
+// A single table records both directions:
+//   DEPOSIT    → money INTO the caisse (client name + phone + amount + description)
+//   WITHDRAWAL → money OUT of the caisse (amount + description)
+const CASH_FULL = `*, client:clients(*)`;
+
+function shapeCashTx(t) {
+  if (!t) return t;
+  shapeClient(t.client);
+  return t;
+}
+async function getCashTxFull(id) {
+  const { data } = await supabase.from("cash_transactions").select(CASH_FULL).eq("id", id).single();
+  return shapeCashTx(toCamel(data));
+}
+
+export const cashApi = {
+  // type: "" (all) | "DEPOSIT" | "WITHDRAWAL"
+  async list({ type = "", search = "" } = {}) {
+    let q = supabase.from("cash_transactions").select(CASH_FULL).order("date", { ascending: false });
+    if (type) q = q.eq("type", type);
+    const { data, error } = await q;
+    if (error) throw error;
+    let result = rows(data).map(shapeCashTx);
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.clientName?.toLowerCase().includes(s) ||
+          r.clientPhone?.includes(s) ||
+          r.description?.toLowerCase().includes(s) ||
+          r.reference?.toLowerCase().includes(s)
+      );
+    }
+    return result;
+  },
+  // Running balance across every transaction (deposits add, withdrawals subtract).
+  async balance() {
+    const { data, error } = await supabase.from("cash_transactions").select("type, amount");
+    if (error) throw error;
+    return (data || []).reduce(
+      (a, r) => a + (r.type === "WITHDRAWAL" ? -1 : 1) * (Number(r.amount) || 0),
+      0
+    );
+  },
+  async create(payload) {
+    const { data, error } = await supabase
+      .from("cash_transactions")
+      .insert({
+        type: payload.type || "DEPOSIT",
+        client_id: payload.clientId || null,
+        client_name: payload.clientName || null,
+        client_phone: payload.clientPhone || null,
+        amount: Number(payload.amount) || 0,
+        description: payload.description || null,
+        date: payload.date || new Date().toISOString(),
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return getCashTxFull(data.id); // enriched so the receipt can print
+  },
+  async update(id, payload) {
+    const patch = {};
+    if (payload.clientId !== undefined) patch.client_id = payload.clientId || null;
+    if (payload.clientName !== undefined) patch.client_name = payload.clientName || null;
+    if (payload.clientPhone !== undefined) patch.client_phone = payload.clientPhone || null;
+    if (payload.amount !== undefined) patch.amount = Number(payload.amount) || 0;
+    if (payload.description !== undefined) patch.description = payload.description || null;
+    if (payload.date !== undefined) patch.date = payload.date;
+    const { data, error } = await supabase
+      .from("cash_transactions")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw error;
+    return getCashTxFull(data.id);
+  },
+  async delete(id) {
+    const { error } = await supabase.from("cash_transactions").delete().eq("id", id);
+    if (error) throw error;
+  },
+};
+
 // ── PAYMENTS (Règlements page) ────────────────────────────────
 function shapePayment(p) {
   if (!p) return p;
@@ -1556,6 +1652,7 @@ export default {
   suppliersApi,
   workersApi,
   expensesApi,
+  cashApi,
   paymentsApi,
   dashboardApi,
   websiteApi,

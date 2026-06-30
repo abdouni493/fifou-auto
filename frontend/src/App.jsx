@@ -12,6 +12,7 @@ import Purchase from "./pages/Purchase.jsx";
 import POS from "./pages/POS.jsx";
 import Sales from "./pages/Sales.jsx";
 import Payments from "./pages/Payments.jsx";
+import Caisse from "./pages/Caisse.jsx";
 import WebsiteSettings from "./pages/WebsiteSettings.jsx";
 import WebsiteReservations from "./pages/WebsiteReservations.jsx";
 import Suppliers from "./pages/Suppliers.jsx";
@@ -92,6 +93,7 @@ export default function App() {
         <Route path="pos" element={<POS />} />
         <Route path="sales" element={<Sales />} />
         <Route path="payments" element={<Payments />} />
+        <Route path="caisse" element={<Caisse />} />
         <Route path="website-settings" element={<WebsiteSettings />} />
         <Route path="website-reservations" element={<WebsiteReservations />} />
         <Route path="suppliers" element={<Suppliers />} />

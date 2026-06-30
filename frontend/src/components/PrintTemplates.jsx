@@ -31,6 +31,14 @@ const L = {
     saleNormal: "Vente normale",
     saleDeposit: "Dépôt / Réservation",
     receiptTitle: "Reçu de Paiement",
+    depositTitle: "Bon de Versement",
+    withdrawalTitle: "Bon de Retrait",
+    depositExtra: "Versement en caisse",
+    withdrawalExtra: "Retrait de caisse",
+    operationDetail: "Détail de l'opération",
+    amount: "Montant",
+    beneficiary: "Bénéficiaire",
+    sigBeneficiary: "Signature Bénéficiaire",
     supplier: "Fournisseur",
     client: "Client",
     clientSeller: "Client (vendeur)",
@@ -84,6 +92,14 @@ const L = {
     saleNormal: "بيع عادي",
     saleDeposit: "عربون / حجز",
     receiptTitle: "وصل دفع",
+    depositTitle: "وصل إيداع",
+    withdrawalTitle: "وصل سحب",
+    depositExtra: "إيداع في الصندوق",
+    withdrawalExtra: "سحب من الصندوق",
+    operationDetail: "تفاصيل العملية",
+    amount: "المبلغ",
+    beneficiary: "المستفيد",
+    sigBeneficiary: "توقيع المستفيد",
     supplier: "المورّد",
     client: "العميل",
     clientSeller: "العميل (البائع)",
@@ -571,6 +587,48 @@ export function PaymentReceipt({ payment, showroom, history = [], lang = "fr" })
       )}
 
       <Signatures left={x.sigClient} right={x.sigShowroom} />
+      <Footer showroom={showroom} lang={lang} />
+    </div>
+  );
+}
+
+// ============================================================================
+// Cash Register Receipt (Caisse — deposit / withdrawal)
+// ============================================================================
+export function CashTransactionInvoice({ transaction, showroom, lang = "fr" }) {
+  const x = tr(lang);
+  const t = transaction || {};
+  const isWithdrawal = t.type === "WITHDRAWAL";
+  // Deposit party — prefer the linked client record, otherwise the typed name/phone.
+  const c = t.client || {};
+  const partyName = `${c.firstName || ""} ${c.lastName || ""}`.trim() || t.clientName;
+
+  return (
+    <div style={sheetStyle(lang)}>
+      <Header showroom={showroom} lang={lang} />
+      <TitleBar
+        lang={lang}
+        title={isWithdrawal ? x.withdrawalTitle : x.depositTitle}
+        reference={t.reference || t.id}
+        date={formatDateTime(t.date)}
+        extra={isWithdrawal ? x.withdrawalExtra : x.depositExtra}
+      />
+
+      {!isWithdrawal && (partyName || t.clientPhone) && (
+        <Frame title={x.client} style={{ marginBottom: 10 }}>
+          <Row lang={lang} label={x.fullName} value={partyName} strong />
+          <Row lang={lang} label={x.phone} value={t.clientPhone || c.phonePrimary} last />
+        </Frame>
+      )}
+
+      <MoneyFrame
+        lang={lang}
+        title={x.operationDetail}
+        lines={t.description ? [{ label: x.description, value: t.description }] : []}
+        total={{ label: x.amount, value: formatAmount(t.amount) }}
+      />
+
+      <Signatures left={isWithdrawal ? x.sigBeneficiary : x.sigClient} right={x.sigShowroom} />
       <Footer showroom={showroom} lang={lang} />
     </div>
   );
