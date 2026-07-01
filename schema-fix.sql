@@ -162,6 +162,14 @@ END $$;
 
 
 -- ============================================================
+-- 6. CAR DOCUMENTS — allow selecting a document type with no file yet
+-- ============================================================
+-- The purchase form now lets the user check off which document types apply
+-- to a car without necessarily attaching a scanned file right away.
+ALTER TABLE car_documents ALTER COLUMN doc_url DROP NOT NULL;
+
+
+-- ============================================================
 -- DONE.
 -- After running: register an admin on the login page, then create workers
 -- (toggle "Activer un compte d'accès" + email + password) and set their role

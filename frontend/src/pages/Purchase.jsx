@@ -29,35 +29,43 @@ const FILTERS = [
 const ENERGIES = [["ESSENCE", "energy.ESSENCE"], ["DIESEL", "energy.DIESEL"], ["HYBRID", "energy.HYBRID"], ["ELECTRIC", "energy.ELECTRIC"]];
 const GEARBOXES = [["MANUAL", "gearbox.MANUAL"], ["AUTO", "gearbox.AUTO"]];
 
-function NewPurchase({ onClose, onCreated }) {
+function PurchaseForm({ onClose, onSaved, editTarget }) {
   const { t } = useTranslation();
+  const isEdit = !!editTarget;
   const [step, setStep] = useState(0);
-  const [sourceType, setSourceType] = useState("SUPPLIER");
-  const [supplier, setSupplier] = useState(null);
-  const [client, setClient] = useState(null);
+  const [sourceType, setSourceType] = useState(editTarget?.sourceType || "SUPPLIER");
+  const [supplier, setSupplier] = useState(editTarget?.sourceType !== "CLIENT" ? editTarget?.supplier || null : null);
+  const [client, setClient] = useState(editTarget?.sourceType === "CLIENT" ? editTarget?.client || null : null);
   const [newSupplier, setNewSupplier] = useState(null);
   const [newClient, setNewClient] = useState(null);
   const [clientErrors, setClientErrors] = useState({});
-  const [car, setCar] = useState({ images: [], energy: "ESSENCE", gearbox: "MANUAL", keysCount: "", documents: [] });
-  const [pricing, setPricing] = useState({ purchasePrice: "", sellingPrice: "", amountPaid: "" });
-  const [inspection, setInspection] = useState(DEFAULT_INSPECTION);
-  const [date, setDate] = useState(toDateTimeLocal());
+  const [car, setCar] = useState(() => editTarget?.car
+    ? { ...editTarget.car, keysCount: editTarget.car.keysCount ?? "", documents: editTarget.car.documents || [] }
+    : { images: [], energy: "ESSENCE", gearbox: "MANUAL", keysCount: "", documents: [] });
+  const [pricing, setPricing] = useState(() => isEdit
+    ? { purchasePrice: String(editTarget.purchasePrice ?? ""), sellingPrice: String(editTarget.sellingPrice ?? ""), amountPaid: String(editTarget.amountPaid ?? "") }
+    : { purchasePrice: "", sellingPrice: "", amountPaid: "" });
+  const [inspection, setInspection] = useState(editTarget?.inspection || editTarget?.car?.inspection || DEFAULT_INSPECTION);
+  const [date, setDate] = useState(toDateTimeLocal(editTarget?.date));
   const [saving, setSaving] = useState(false);
 
   // Load the saved checklist template so items added on a previous purchase/sale
   // reappear here. Falls back to DEFAULT_INSPECTION when none is stored yet.
+  // Skipped in edit mode, where the purchase's own saved inspection is used.
   useEffect(() => {
+    if (isEdit) return;
     inspectionApi.getTemplate().then((tpl) => { if (tpl) setInspection(tpl); }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // Persist add/remove of checklist items so they're remembered next time.
   const persistInspection = (next) => { inspectionApi.saveTemplate(next).catch(() => {}); };
 
-  // documents
+  // documents — every known document type is shown as a checkable card; a type
+  // can be checked (applicable to this car) with or without an attached file.
   const { data: docTypes, refetch: refetchTypes } = useFetch(() => carsApi.getDocumentTypes(), []);
-  const [docType, setDocType] = useState("");
   const [newDocType, setNewDocType] = useState("");
   const [showNewDocType, setShowNewDocType] = useState(false);
-  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingType, setUploadingType] = useState("");
 
   const setCarField = (f) => (e) => setCar({ ...car, [f]: e.target.value });
   // purchase price drives the editable "montant versé" default
@@ -68,21 +76,33 @@ function NewPurchase({ onClose, onCreated }) {
     if (!newDocType.trim()) return;
     const data = await carsApi.createDocumentType(newDocType.trim());
     await refetchTypes();
-    setDocType(data.name);
+    setCar((c) => ({ ...c, documents: [...(c.documents || []), { type: data.name, url: null }] }));
     setNewDocType("");
     setShowNewDocType(false);
   };
 
-  const scanDocument = async (file) => {
-    if (!file || !docType) { alert("Sélectionnez d'abord un type de document"); return; }
-    setUploadingDoc(true);
+  const toggleDocType = (typeName) => {
+    setCar((c) => {
+      const exists = (c.documents || []).some((d) => d.type === typeName);
+      return {
+        ...c,
+        documents: exists
+          ? c.documents.filter((d) => d.type !== typeName)
+          : [...(c.documents || []), { type: typeName, url: null }],
+      };
+    });
+  };
+
+  const scanDocument = async (typeName, file) => {
+    if (!file) return;
+    setUploadingType(typeName);
     try {
       const url = await carsApi.uploadDocument(null, file);
-      setCar((c) => ({ ...c, documents: [...(c.documents || []), { type: docType, url }] }));
+      setCar((c) => ({ ...c, documents: (c.documents || []).map((d) => (d.type === typeName ? { ...d, url } : d)) }));
     } catch (e) {
       alert(e?.message || "Erreur lors du téléchargement du document");
     } finally {
-      setUploadingDoc(false);
+      setUploadingType("");
     }
   };
 
@@ -105,7 +125,7 @@ function NewPurchase({ onClose, onCreated }) {
 
   const canNext1 = sourceType === "SUPPLIER" ? !!supplier : !!client;
 
-  const create = async () => {
+  const save = async () => {
     setSaving(true);
     try {
       const payload = {
@@ -119,10 +139,10 @@ function NewPurchase({ onClose, onCreated }) {
         inspection,
         date,
       };
-      const data = await purchasesApi.create(payload);
-      onCreated(data);
+      const data = isEdit ? await purchasesApi.update(editTarget.id, payload) : await purchasesApi.create(payload);
+      onSaved(data);
     } catch (e) {
-      alert(e.message || "Erreur lors de la création");
+      alert(e.message || (isEdit ? "Erreur lors de la mise à jour" : "Erreur lors de la création"));
     } finally {
       setSaving(false);
     }
@@ -139,7 +159,7 @@ function NewPurchase({ onClose, onCreated }) {
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
       >
         <div className="flex items-center justify-between mb-6">
-          <h2 className="heading text-xl text-text-primary">{t("purchase.new")}</h2>
+          <h2 className="heading text-xl text-text-primary">{isEdit ? t("purchase.editTitle") : t("purchase.new")}</h2>
           <button onClick={onClose} className="text-text-muted hover:text-text-primary"><X size={22} /></button>
         </div>
 
@@ -257,47 +277,55 @@ function NewPurchase({ onClose, onCreated }) {
 
             {/* Keys & documents */}
             <div className="flex items-center gap-3 my-2"><span className="label-caps !mb-0">{t("purchase.keysAndDocs")}</span><div className="flex-1 h-px bg-red-600/20" /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label={t("car.keys")}>
-                <div className="relative">
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500/70" size={15} />
-                  <input className="input pl-9" type="number" min="0" value={car.keysCount} onChange={setCarField("keysCount")} placeholder="2" />
-                </div>
-              </Field>
-              <div>
-                <div className="flex items-center justify-between">
-                  <span className="label-caps">{t("car.docType")}</span>
-                  <button type="button" className="text-[0.6rem] text-red-400 hover:text-red-300 uppercase tracking-wider font-bold" onClick={() => setShowNewDocType((s) => !s)}>{t("car.newDocType")}</button>
-                </div>
-                <div className="flex gap-2">
-                  <select className="input flex-1" value={docType} onChange={(e) => setDocType(e.target.value)}>
-                    <option value="">— {t("common.choose")} —</option>
-                    {(docTypes || []).map((dt) => <option key={dt.id} value={dt.name}>{dt.name}</option>)}
-                  </select>
-                  <label className={`btn-ghost text-xs py-2 px-3 cursor-pointer ${!docType ? "opacity-50" : ""}`}>
-                    <Upload size={14} /> {uploadingDoc ? "..." : t("car.scan")}
-                    <input type="file" accept="image/*" className="hidden" disabled={!docType} onChange={(e) => scanDocument(e.target.files[0])} />
-                  </label>
-                </div>
-                {showNewDocType && (
-                  <div className="flex gap-2 mt-2">
-                    <input className="input flex-1" placeholder={t("car.docTypeName")} value={newDocType} onChange={(e) => setNewDocType(e.target.value)} />
-                    <button type="button" className="btn-primary text-xs py-2 px-3" onClick={createDocType}>{t("common.create")}</button>
-                  </div>
-                )}
+            <Field label={t("car.keys")} className="max-w-[10rem]">
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 text-red-500/70" size={15} />
+                <input className="input pl-9" type="number" min="0" value={car.keysCount} onChange={setCarField("keysCount")} placeholder="2" />
               </div>
+            </Field>
+
+            <div className="flex items-center justify-between">
+              <span className="label-caps !mb-0">{t("car.availableDocTypes")}</span>
+              <button type="button" className="text-[0.6rem] text-red-400 hover:text-red-300 uppercase tracking-wider font-bold" onClick={() => setShowNewDocType((s) => !s)}>{t("car.newDocType")}</button>
             </div>
-            {(car.documents || []).length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {car.documents.map((d, i) => (
-                  <div key={i} className="flex items-center gap-2 glass-card !rounded-lg px-2.5 py-1.5">
-                    <FileText size={14} className="text-blue-400" />
-                    <a href={d.url} target="_blank" rel="noreferrer" className="text-xs text-text-primary hover:underline">{d.type}</a>
-                    <button type="button" onClick={() => setCar((c) => ({ ...c, documents: c.documents.filter((_, idx) => idx !== i) }))} className="text-text-muted hover:text-rose-400"><X size={13} /></button>
-                  </div>
-                ))}
+            {showNewDocType && (
+              <div className="flex gap-2">
+                <input className="input flex-1" placeholder={t("car.docTypeName")} value={newDocType} onChange={(e) => setNewDocType(e.target.value)} />
+                <button type="button" className="btn-primary text-xs py-2 px-3" onClick={createDocType}>{t("common.create")}</button>
               </div>
             )}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              {(docTypes || []).map((dt) => {
+                const doc = (car.documents || []).find((d) => d.type === dt.name);
+                const checked = !!doc;
+                return (
+                  <div key={dt.id} className={`glass-card !rounded-xl p-2.5 border transition ${checked ? "border-red-600/60" : "border-white/10"}`}>
+                    <button type="button" onClick={() => toggleDocType(dt.name)} className="flex items-center gap-2 w-full text-left rtl:text-right">
+                      <span className={`w-5 h-5 rounded-md flex items-center justify-center border shrink-0 transition ${checked ? "bg-red-600 border-red-600 text-white" : "border-white/20 text-transparent"}`}>
+                        <Check size={13} />
+                      </span>
+                      <span className="text-sm text-text-primary truncate">{dt.name}</span>
+                    </button>
+                    {checked && (
+                      <div className="flex items-center gap-2 mt-2 pl-7 rtl:pl-0 rtl:pr-7">
+                        {doc.url ? (
+                          <a href={doc.url} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-xs text-blue-400 hover:underline flex-1 min-w-0 truncate">
+                            <FileText size={12} className="shrink-0" /> {t("car.viewFile")}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-text-muted flex-1 truncate">{t("car.noFileYet")}</span>
+                        )}
+                        <label className="text-text-muted hover:text-red-400 cursor-pointer shrink-0">
+                          {uploadingType === dt.name ? <span className="text-[0.6rem]">...</span> : <Upload size={13} />}
+                          <input type="file" accept="image/*" className="hidden" onChange={(e) => scanDocument(dt.name, e.target.files[0])} />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {(!docTypes || docTypes.length === 0) && <p className="text-xs text-text-muted italic col-span-full">{t("car.noDocTypes")}</p>}
+            </div>
 
             <div className="flex items-center gap-3 my-2"><span className="label-caps !mb-0">{t("purchase.pricing")}</span><div className="flex-1 h-px bg-red-600/20" /></div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -321,7 +349,7 @@ function NewPurchase({ onClose, onCreated }) {
             <Field label={t("purchase.purchaseDate")}><input type="datetime-local" className="input sm:max-w-xs" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
             <div className="flex justify-between pt-4">
               <button className="btn-ghost" onClick={() => setStep(1)}>← {t("common.back")}</button>
-              <button className="btn-primary" onClick={create} disabled={saving}>{saving ? "..." : t("purchase.createPurchase")}</button>
+              <button className="btn-primary" onClick={save} disabled={saving}>{saving ? "..." : isEdit ? t("purchase.saveChanges") : t("purchase.createPurchase")}</button>
             </div>
           </div>
         )}
@@ -346,6 +374,7 @@ export default function Purchase() {
     return purchasesApi.list(params);
   }, [filter, search]);
   const [showNew, setShowNew] = useState(false);
+  const [editItem, setEditItem] = useState(null);
   const [createdPrompt, setCreatedPrompt] = useState(null);
   const [payTarget, setPayTarget] = useState(null);
   const [payAmount, setPayAmount] = useState("");
@@ -360,6 +389,7 @@ export default function Purchase() {
 
   const menuItems = (p) => [
     { label: t("common.view"), icon: Eye, onClick: () => setViewItem(p) },
+    can("purchase", "edit") && { label: t("common.edit"), icon: Pencil, onClick: () => setEditItem(p) },
     can("purchase", "print") && { label: t("common.print"), icon: Printer, onClick: () => doPrint(p) },
     can("purchase", "edit") && p.amountRest > 0 && { label: t("common.payDebt"), icon: Wallet, onClick: () => { setPayTarget(p); setPayAmount(String(p.amountRest)); } },
     can("purchase", "delete") && { label: t("common.delete"), icon: Trash2, danger: true, onClick: () => setDeleteId(p.id) },
@@ -444,7 +474,18 @@ export default function Purchase() {
       )}
 
       <AnimatePresence>
-        {showNew && <NewPurchase onClose={() => setShowNew(false)} onCreated={(p) => { setShowNew(false); refetch(); setCreatedPrompt(p); toast(t("purchase.createdToast")); }} />}
+        {(showNew || editItem) && (
+          <PurchaseForm
+            editTarget={editItem}
+            onClose={() => { setShowNew(false); setEditItem(null); }}
+            onSaved={(p) => {
+              const wasEdit = !!editItem;
+              setShowNew(false); setEditItem(null); refetch();
+              if (wasEdit) toast(t("purchase.updatedToast"));
+              else { setCreatedPrompt(p); toast(t("purchase.createdToast")); }
+            }}
+          />
+        )}
       </AnimatePresence>
 
       {/* Print prompt */}
@@ -489,11 +530,16 @@ export default function Purchase() {
               <div>
                 <p className="label-caps mb-2">{t("car.documentsOfVehicle")}</p>
                 <div className="flex flex-wrap gap-2">
-                  {viewItem.car.documents.map((d, i) => (
+                  {viewItem.car.documents.map((d, i) => d.url ? (
                     <a key={i} href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 glass-card !rounded-lg px-2.5 py-1.5 hover:border-red-600/60">
                       <FileText size={14} className="text-blue-400" />
                       <span className="text-xs text-text-primary">{d.type}</span>
                     </a>
+                  ) : (
+                    <div key={i} className="flex items-center gap-2 glass-card !rounded-lg px-2.5 py-1.5 opacity-60">
+                      <FileText size={14} className="text-text-muted" />
+                      <span className="text-xs text-text-primary">{d.type}</span>
+                    </div>
                   ))}
                 </div>
               </div>

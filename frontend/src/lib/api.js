@@ -496,6 +496,46 @@ export const purchasesApi = {
 
     return getPurchaseFull(purchase.id); // enriched (joins) so the invoice can print
   },
+  async update(id, { sourceType, supplierId, clientId, car, purchasePrice, sellingPrice, amountPaid, inspection, date }) {
+    const { data: existing, error: exError } = await supabase.from("purchases").select("car_id").eq("id", id).single();
+    if (exError) throw exError;
+    const carId = existing.car_id;
+
+    // 1. car fields
+    const { error: carError } = await supabase
+      .from("cars")
+      .update({ ...carInsert(car), inspection: inspection ?? car.inspection ?? {} })
+      .eq("id", carId);
+    if (carError) throw carError;
+
+    // 2. documents — replace the full set (each: { type, url }, url may be null)
+    const { error: delDocError } = await supabase.from("car_documents").delete().eq("car_id", carId);
+    if (delDocError) throw delDocError;
+    const docs = car.documents || [];
+    if (docs.length > 0) {
+      const { error: docError } = await supabase
+        .from("car_documents")
+        .insert(docs.map((d) => ({ car_id: carId, type: d.type, doc_url: d.url || null })));
+      if (docError) throw docError;
+    }
+
+    // 3. the purchase
+    const { error: purError } = await supabase
+      .from("purchases")
+      .update({
+        source_type: sourceType,
+        supplier_id: supplierId || null,
+        client_id: clientId || null,
+        purchase_price: Number(purchasePrice) || 0,
+        selling_price: Number(sellingPrice) || 0,
+        amount_paid: Number(amountPaid) || 0,
+        date,
+      })
+      .eq("id", id);
+    if (purError) throw purError;
+
+    return getPurchaseFull(id);
+  },
   async delete(id) {
     const { data: purchase } = await supabase.from("purchases").select("car_id").eq("id", id).single();
     await supabase.from("purchases").delete().eq("id", id);

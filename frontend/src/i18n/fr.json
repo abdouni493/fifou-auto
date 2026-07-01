@@ -187,9 +187,13 @@
     "documents": "Documents",
     "documentsOfVehicle": "Documents du véhicule",
     "docType": "Type de document",
+    "availableDocTypes": "Types de documents disponibles",
     "newDocType": "+ Nouveau type",
     "docTypeName": "Nom du type (ex: Carte Grise)",
     "scan": "Scanner",
+    "viewFile": "Voir le fichier",
+    "noFileYet": "Aucun fichier",
+    "noDocTypes": "Aucun type de document. Créez-en un.",
     "dropImages": "Glissez des images ici ou cliquez pour parcourir"
   },
   "client": {
@@ -242,6 +246,9 @@
   "purchase": {
     "title": "Achats",
     "new": "Nouvel Achat",
+    "editTitle": "Modifier l'achat",
+    "saveChanges": "Enregistrer les modifications",
+    "updatedToast": "Achat mis à jour avec succès",
     "filterSupplier": "Fournisseur",
     "filterClient": "Client",
     "filterPaid": "Payé",

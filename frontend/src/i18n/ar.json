@@ -187,9 +187,13 @@
     "documents": "الوثائق",
     "documentsOfVehicle": "وثائق المركبة",
     "docType": "نوع الوثيقة",
+    "availableDocTypes": "أنواع الوثائق المتوفرة",
     "newDocType": "+ نوع جديد",
     "docTypeName": "اسم النوع (مثال: البطاقة الرمادية)",
     "scan": "مسح",
+    "viewFile": "عرض الملف",
+    "noFileYet": "لا يوجد ملف",
+    "noDocTypes": "لا يوجد نوع وثيقة. قم بإنشاء واحد.",
     "dropImages": "اسحب الصور هنا أو انقر للتصفح"
   },
   "client": {
@@ -242,6 +246,9 @@
   "purchase": {
     "title": "المشتريات",
     "new": "شراء جديد",
+    "editTitle": "تعديل الشراء",
+    "saveChanges": "حفظ التعديلات",
+    "updatedToast": "تم تحديث الشراء بنجاح",
     "filterSupplier": "مورد",
     "filterClient": "عميل",
     "filterPaid": "مدفوع",

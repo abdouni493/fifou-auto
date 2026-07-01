@@ -382,9 +382,10 @@ CREATE TABLE IF NOT EXISTS car_documents (
   id        SERIAL PRIMARY KEY,
   car_id    INT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
   type      TEXT NOT NULL,                   -- e.g. "Carte Grise"
-  -- doc_url: full public URL from Supabase Storage (bucket: car-documents)
-  -- Stores images or PDFs scanned at purchase time
-  doc_url   TEXT NOT NULL,
+  -- doc_url: full public URL from Supabase Storage (bucket: car-documents).
+  -- Nullable: a document type can be marked as applicable to the car before
+  -- (or without ever) attaching a scanned file.
+  doc_url   TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 ALTER TABLE car_documents ENABLE ROW LEVEL SECURITY;
