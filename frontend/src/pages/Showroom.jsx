@@ -74,11 +74,16 @@ function CarDetail({ car }) {
       {(car.documents || []).length > 0 && (
         <Section title={t("car.documentsOfVehicle")} tint="text-blue-400">
           <div className="flex flex-wrap gap-2">
-            {car.documents.map((d, i) => (
+            {car.documents.map((d, i) => d.url ? (
               <a key={i} href={d.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 glass-card !rounded-lg px-3 py-2 hover:border-red-600/60 transition">
                 <FileText size={15} className="text-blue-400" />
                 <span className="text-xs text-text-primary">{d.type}</span>
               </a>
+            ) : (
+              <div key={i} className="flex items-center gap-2 glass-card !rounded-lg px-3 py-2 opacity-60">
+                <FileText size={15} className="text-text-muted" />
+                <span className="text-xs text-text-primary">{d.type}</span>
+              </div>
             ))}
           </div>
         </Section>

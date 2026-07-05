@@ -288,6 +288,7 @@ function PurchaseForm({ onClose, onSaved, editTarget }) {
               <span className="label-caps !mb-0">{t("car.availableDocTypes")}</span>
               <button type="button" className="text-[0.6rem] text-red-400 hover:text-red-300 uppercase tracking-wider font-bold" onClick={() => setShowNewDocType((s) => !s)}>{t("car.newDocType")}</button>
             </div>
+            <p className="text-xs text-text-muted italic -mt-1">{t("car.scanOptional")}</p>
             {showNewDocType && (
               <div className="flex gap-2">
                 <input className="input flex-1" placeholder={t("car.docTypeName")} value={newDocType} onChange={(e) => setNewDocType(e.target.value)} />

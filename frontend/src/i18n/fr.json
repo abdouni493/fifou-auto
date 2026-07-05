@@ -194,6 +194,7 @@
     "viewFile": "Voir le fichier",
     "noFileYet": "Aucun fichier",
     "noDocTypes": "Aucun type de document. Créez-en un.",
+    "scanOptional": "Le scan des documents est optionnel",
     "dropImages": "Glissez des images ici ou cliquez pour parcourir"
   },
   "client": {
