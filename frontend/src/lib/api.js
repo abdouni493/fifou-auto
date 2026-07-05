@@ -473,7 +473,7 @@ export const purchasesApi = {
     if (docs.length > 0) {
       const { error: docError } = await supabase
         .from("car_documents")
-        .insert(docs.map((d) => ({ car_id: carRow.id, type: d.type, doc_url: d.url })));
+        .insert(docs.map((d) => ({ car_id: carRow.id, type: d.type, doc_url: d.url || "" })));
       if (docError) throw docError;
     }
 
@@ -515,7 +515,7 @@ export const purchasesApi = {
     if (docs.length > 0) {
       const { error: docError } = await supabase
         .from("car_documents")
-        .insert(docs.map((d) => ({ car_id: carId, type: d.type, doc_url: d.url || null })));
+        .insert(docs.map((d) => ({ car_id: carId, type: d.type, doc_url: d.url || "" })));
       if (docError) throw docError;
     }
 
