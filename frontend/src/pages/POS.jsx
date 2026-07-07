@@ -222,6 +222,11 @@ export default function POS() {
   const [selling, setSelling] = useState(null);
   const [createdPrompt, setCreatedPrompt] = useState(null);
 
+  // Clean up orphaned car records left by previous purchase deletions
+  useEffect(() => {
+    carsApi.cleanupOrphaned().catch(() => {});
+  }, []);
+
   const filtered = (cars || []).filter((c) =>
     (!energy || c.energy === energy) &&
     (`${c.brand} ${c.model} ${c.plate || ""}`.toLowerCase().includes(search.toLowerCase()))

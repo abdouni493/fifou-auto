@@ -371,7 +371,12 @@ export const carsApi = {
     if (search) q = q.or(`brand.ilike.%${search}%,model.ilike.%${search}%,plate.ilike.%${search}%`);
     const { data, error } = await q;
     if (error) throw error;
-    return rows(data).map(shapeCar);
+    const all = rows(data).map(shapeCar);
+    // Hide orphaned cars (AVAILABLE with no purchase record)
+    return all.filter((c) => {
+      if (c.status !== "AVAILABLE") return true; // SOLD / RESERVED are always shown
+      return Array.isArray(c.purchases) ? c.purchases.length > 0 : !!c.purchase;
+    });
   },
   async listAvailable() {
     const { data, error } = await supabase
@@ -380,7 +385,9 @@ export const carsApi = {
       .eq("status", "AVAILABLE")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    return rows(data).map(shapeCar);
+    const all = rows(data).map(shapeCar);
+    // Filter out orphaned cars (no purchase record) — they shouldn't appear in POS
+    return all.filter((c) => Array.isArray(c.purchases) ? c.purchases.length > 0 : !!c.purchase);
   },
   async get(id) {
     const { data, error } = await supabase.from("cars").select(CAR_FULL).eq("id", id).single();
@@ -433,6 +440,22 @@ export const carsApi = {
     const { data, error } = await supabase.from("car_document_types").insert({ name }).select().single();
     if (error) throw error;
     return toCamel(data);
+  },
+  // Remove orphaned car records (AVAILABLE with no purchase) left behind
+  // by previous purchase deletions that failed to clean up the car.
+  async cleanupOrphaned() {
+    const { data: cars, error } = await supabase
+      .from("cars")
+      .select("id, purchases(id)")
+      .eq("status", "AVAILABLE");
+    if (error) throw error;
+    const orphaned = (cars || []).filter((c) => !c.purchases || c.purchases.length === 0);
+    let deleted = 0;
+    for (const c of orphaned) {
+      const { error: delErr } = await supabase.from("cars").delete().eq("id", c.id);
+      if (!delErr) deleted++;
+    }
+    return deleted;
   },
 };
 
@@ -538,8 +561,24 @@ export const purchasesApi = {
   },
   async delete(id) {
     const { data: purchase } = await supabase.from("purchases").select("car_id").eq("id", id).single();
-    await supabase.from("purchases").delete().eq("id", id);
-    if (purchase?.car_id) await supabase.from("cars").delete().eq("id", purchase.car_id);
+    const carId = purchase?.car_id;
+
+    if (carId) {
+      // Deleting the car cascades to delete the purchase (ON DELETE CASCADE),
+      // car_documents, sales, special_offers, and website_reservations.
+      const { error: carErr } = await supabase.from("cars").delete().eq("id", carId);
+      if (carErr) {
+        // Fallback: delete the purchase first, then retry car deletion
+        const { error: purErr } = await supabase.from("purchases").delete().eq("id", id);
+        if (purErr) throw purErr;
+        const { error: carErr2 } = await supabase.from("cars").delete().eq("id", carId);
+        if (carErr2) console.warn("Could not delete orphaned car", carId, carErr2.message);
+      }
+    } else {
+      // No car linked — just delete the purchase
+      const { error } = await supabase.from("purchases").delete().eq("id", id);
+      if (error) throw error;
+    }
   },
   async addPayment(purchaseId, amount) {
     const { error } = await supabase
