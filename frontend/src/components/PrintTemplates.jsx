@@ -81,6 +81,12 @@ const L = {
     energyLabels: { ESSENCE: "Essence", DIESEL: "Diesel", HYBRID: "Hybride", ELECTRIC: "Électrique" },
     gearboxLabels: { MANUAL: "Manuelle", AUTO: "Automatique" },
     kmUnit: "km",
+    // New: deposit conditions
+    depositConditionsTitle: "CONDITION RELATIVE AUX ARRHES",
+    depositConditionsText: `Le montant versé par le client à la réservation du véhicule est expressément considéré comme des ARRHES DE RÉSERVATION.
+En cas de désistement, d’annulation ou de refus du client de finaliser l’achat du véhicule de son propre fait, les arrhes versées restent acquises à FIFOU AUTO et ne donnent lieu à aucun remboursement, sous réserve des dispositions légales impératives applicables.
+Le client reconnaît avoir été informé de cette condition avant le versement des arrhes, l’avoir lue, comprise et acceptée.`,
+    depositManualMention: `Mention manuscrite du client : « Lu et approuvé, bon pour accord. »`,
   },
   ar: {
     telPrefix: "الهاتف :",
@@ -114,7 +120,7 @@ const L = {
     idDoc: "وثيقة الهوية",
     deliveredOn: "صادرة في",
     expiresOn: "تنتهي في",
-    brand: "الماركة", model: "الطراز", plate: "رقم التسجيل", year: "السنة",
+    brand: "الماركة", model: "الطرا��", plate: "رقم التسجيل", year: "السنة",
     color: "اللون", energy: "الطاقة", gearbox: "علبة السرعة", seats: "المقاعد",
     mileage: "المسافة المقطوعة", keys: "عدد المفاتيح", vin: "رقم الهيكل", documents: "الوثائق",
     financialInfo: "المعلومات المالية",
@@ -142,6 +148,12 @@ const L = {
     energyLabels: { ESSENCE: "بنزين", DIESEL: "ديزل", HYBRID: "هجين", ELECTRIC: "كهربائي" },
     gearboxLabels: { MANUAL: "يدوية", AUTO: "أوتوماتيكية" },
     kmUnit: "كم",
+    // New: deposit conditions (Arabic translation)
+    depositConditionsTitle: "شروط متعلقة بالعربون",
+    depositConditionsText: `المبلغ المدفوع من قبل العميل عند حجز المركبة يُعتَبر صراحةً عربونًا للحجز.
+في حالة تراجع العميل أو إلغاءه أو امتناعه عن إتمام شراء المركبة لسبب يعود إليه، يظل العربون المدفوع محقّقًا لشركة FIFOU AUTO ولا يرد، مع مراعاة الأحكام القانونية الملزمة السارية.
+يقر العميل بأنه تم إعلامه بهذه الشروط قبل دفع العربون، وأنه قرأها وفهمها وقبلها.`,
+    depositManualMention: `إشارة بخط اليد من العميل: «اطلعت ووافقت، صالح للموافقة.»`,
   },
 };
 
@@ -434,6 +446,22 @@ function InspectionBlock({ inspection, lang }) {
   );
 }
 
+// ── Conditions block (compact bilingual-ready) ────────────────────────────
+function ConditionsBlock({ lang }) {
+  const x = tr(lang);
+  // Compact, small-font framed block to keep the page single-sheet friendly.
+  return (
+    <div style={{ marginTop: 8, breakInside: "avoid" }}>
+      <Frame title={x.depositConditionsTitle} style={{ padding: 0 }}>
+        <div style={{ fontSize: 10, color: INK, whiteSpace: "pre-line", lineHeight: 1.25 }}>
+          <div style={{ marginBottom: 6 }}>{x.depositConditionsText}</div>
+          <div style={{ fontWeight: 800 }}>{x.depositManualMention}</div>
+        </div>
+      </Frame>
+    </div>
+  );
+}
+
 // ── Signatures + footer ───────────────────────────────────────────────────
 function Signatures({ left, right }) {
   const box = {
@@ -549,6 +577,10 @@ export function SaleInvoice({ sale, showroom, lang = "fr" }) {
       </div>
 
       <InspectionBlock inspection={sale.inspection} lang={lang} />
+
+      {/* New: deposit/arrhes conditions */}
+      <ConditionsBlock lang={lang} />
+
       <Signatures left={x.sigClient} right={x.sigShowroom} />
       <Footer showroom={showroom} lang={lang} />
     </div>
