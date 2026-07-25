@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Printer, FileBarChart, Loader2, LayoutGrid, Table as TableIcon, ChevronRight } from "lucide-react";
+import { Printer, FileBarChart, Loader2, LayoutGrid, Table as TableIcon, ChevronRight, TrendingUp } from "lucide-react";
 import { reportsApi } from "../lib/api.js";
 import { useStore } from "../store/useStore.js";
 import { useCan } from "../lib/permissions.js";
@@ -146,6 +146,10 @@ export default function Reports() {
     { key: "client", label: "Client", render: (s) => `${s.client?.firstName || ""} ${s.client?.lastName || ""}` },
     { key: "car", label: "Véhicule", render: (s) => `${s.car?.brand} ${s.car?.model}`, cls: "text-text-muted" },
     { key: "total", label: "Total", render: (s) => money(s.totalAfterReduction), cls: "text-text-primary font-bold" },
+    { key: "profit", label: "Profit", render: (s) => {
+      const profit = s.totalAfterReduction - (s.purchasePrice || 0);
+      return <span className={profit >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}><TrendingUp size={12} className="inline mr-1" />{money(profit)}</span>;
+    }, cls: "" },
     { key: "rest", label: "Reste", render: (s) => money(s.amountRest), cls: "text-rose-400" },
     { key: "date", label: "Date", render: (s) => formatDate(s.date), cls: "text-text-muted" },
   ];
@@ -160,8 +164,8 @@ export default function Reports() {
     { key: "car", label: "Véhicule", render: (c) => `${c.car?.brand} ${c.car?.model}` },
     { key: "cost", label: "Coût total", render: (c) => money(c.totalCost), cls: "text-text-muted" },
     { key: "sale", label: "Vente", render: (c) => money(c.salePrice), cls: "text-text-primary" },
-    { key: "net", label: "Marge nette", render: (c) => <span className={c.netMargin >= 0 ? "text-emerald-400" : "text-rose-400"}>{money(c.netMargin)}</span> },
-    { key: "pct", label: "%", render: (c) => `${c.netMarginPct}%`, cls: "text-text-muted" },
+    { key: "net", label: "Marge nette", render: (c) => <span className={`font-bold flex items-center gap-1 ${c.netMargin >= 0 ? "text-emerald-400" : "text-rose-400"}`}><TrendingUp size={12} />{money(c.netMargin)}</span> },
+    { key: "pct", label: "%", render: (c) => <span className={c.netMargin >= 0 ? "text-emerald-400 font-bold" : "text-rose-400 font-bold"}>{c.netMarginPct}%</span>, cls: "" },
   ];
   const debtClientCols = [
     { key: "client", label: "Client", render: (d) => `${d.client?.firstName || ""} ${d.client?.lastName || ""}` },
@@ -189,9 +193,9 @@ export default function Reports() {
   ];
 
   // row → detail object
-  const saleDetail = (s) => ({ car: s.car, rows: [["Client", `${s.client?.firstName} ${s.client?.lastName}`], ["Téléphone", s.client?.phonePrimary], ["Véhicule", `${s.car?.brand} ${s.car?.model}`], ["Plaque", s.car?.plate], ["Prix base", money(s.totalBeforeTax)], ["TVA", s.tvaEnabled ? `${s.tvaRate}%` : "Non"], ["Total final", money(s.totalAfterReduction)], ["Payé", money(s.amountPaid)], ["Reste", money(s.amountRest)], ["Type", s.saleType === "DEPOSIT" ? "Dépôt" : "Normale"], ["Date", formatDate(s.date)]] });
-  const purchaseDetail = (p) => ({ car: p.car, rows: [["Référence", p.reference], ["Véhicule", `${p.car?.brand} ${p.car?.model}`], ["Plaque", p.car?.plate], ["Source", p.sourceType === "SUPPLIER" ? "Fournisseur" : "Client"], ["Prix d'achat", money(p.purchasePrice)], ["Payé", money(p.amountPaid)], ["Reste", money(p.amountRest)], ["Clés", p.car?.keysCount ?? "—"], ["Date", formatDate(p.date)]] });
-  const carDetail = (c) => ({ car: c.car, expenseList: c.expenseList, rows: [["Véhicule", `${c.car?.brand} ${c.car?.model}`], ["Plaque", c.car?.plate], ["Prix d'achat", money(c.purchasePrice)], ["Dépenses", money(c.expenses)], ["Coût total", money(c.totalCost)], ["Prix de vente", money(c.salePrice)], ["Marge brute", money(c.grossMargin)], ["Marge nette", money(c.netMargin)], ["Marge nette %", `${c.netMarginPct}%`]] });
+  const saleDetail = (s) => ({ car: s.car, rows: [["Client", `${s.client?.firstName} ${s.client?.lastName}`], ["Téléphone", s.client?.phonePrimary], ["Véhicule", `${s.car?.brand} ${s.car?.model}`], ["Plaque", s.car?.plate], ["Prix de vente", money(s.totalAfterReduction)], ["Achat initial", money(s.purchasePrice || 0)], ["Profit", money(s.totalAfterReduction - (s.purchasePrice || 0))], ["Payé", money(s.amountPaid)], ["Date", formatDate(s.date)]] });
+  const purchaseDetail = (p) => ({ car: p.car, rows: [["Référence", p.reference], ["Véhicule", `${p.car?.brand} ${p.car?.model}`], ["Plaque", p.car?.plate], ["Source", p.sourceType === "SUPPLIER" ? p.supplier?.fullName : p.client ? `${p.client.firstName} ${p.client.lastName}` : "—"], ["Prix", money(p.purchasePrice)], ["Payé", money(p.amountPaid)], ["Reste", money(p.amountRest)], ["Date", formatDate(p.date)]] });
+  const carDetail = (c) => ({ car: c.car, expenseList: c.expenseList, rows: [["Véhicule", `${c.car?.brand} ${c.car?.model}`], ["Plaque", c.car?.plate], ["Prix d'achat", money(c.purchasePrice)], ["Dépenses", money(c.expenses)], ["Coût total", money(c.totalCost)], ["Prix de vente", money(c.salePrice)], ["Profit brut", money(c.grossMargin)], ["Profit net", money(c.netMargin)], ["Marge %", `${c.netMarginPct}%`]] });
   const debtClientDetail = (d) => ({ car: d.car, rows: [["Client", `${d.client?.firstName} ${d.client?.lastName}`], ["Véhicule", `${d.car?.brand} ${d.car?.model}`], ["Total", money(d.total)], ["Payé", money(d.paid)], ["Reste", money(d.rest)], ["Date", formatDate(d.date)]] });
   const debtSupplierDetail = (d) => ({ car: d.car, rows: [["Source", d.source], ["Véhicule", `${d.car?.brand} ${d.car?.model}`], ["Total", money(d.total)], ["Payé", money(d.paid)], ["Reste", money(d.rest)], ["Date", formatDate(d.date)]] });
   const payrollDetail = (p) => ({ rows: [["Employé", p.fullName], ["Rôle", p.role], ["Type", p.paymentType], ["Salaire base", money(p.baseSalary)], ["Acomptes", money(p.advances)], ["Absences", money(p.absences)], ["Net payé", money(p.netPaid)]] });
@@ -206,7 +210,7 @@ export default function Reports() {
             <Field label="Du" className="flex-1"><input type="date" className="input" value={from} onChange={(e) => setFrom(e.target.value)} /></Field>
             <Field label="Au" className="flex-1"><input type="date" className="input" value={to} onChange={(e) => setTo(e.target.value)} /></Field>
             <motion.button className="btn-primary" onClick={generate} disabled={loading} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-              {loading ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-flex"><Loader2 size={16} /></motion.span> : "Générer le rapport"}
+              {loading ? <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-flex"><Loader2 size={16} /></motion.span> : "Générer"}
             </motion.button>
             {report && (
               <>
@@ -233,8 +237,8 @@ export default function Reports() {
           <Section title="1. Synthèse Globale">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                ["Ventes", `${report.synthese.totalSalesCount} op.`, money(report.synthese.totalSalesAmount), "text-emerald-400"],
-                ["Achats", `${report.synthese.totalPurchaseCount} op.`, money(report.synthese.totalPurchaseAmount), "text-violet-400"],
+                ["Ventes", `${report.synthese.totalSalesCount} op.", money(report.synthese.totalSalesAmount), "text-emerald-400"],
+                ["Achats", `${report.synthese.totalPurchaseCount} op.", money(report.synthese.totalPurchaseAmount), "text-violet-400"],
                 ["Dépenses véhicules", "", money(report.synthese.totalCarExpenses), "text-amber-400"],
                 ["Dépenses showroom", "", money(report.synthese.totalShowroomExpenses), "text-amber-400"],
                 ["Bénéfice brut", "", money(report.synthese.grossProfit), "text-emerald-400"],

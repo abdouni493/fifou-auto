@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { Eye, Pencil, Trash2, Printer, Wallet, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Eye, Pencil, Trash2, Printer, Wallet, LayoutGrid, Table as TableIcon, TrendingUp } from "lucide-react";
 import { salesApi } from "../lib/api.js";
 import { useFetch } from "../hooks/useApi.js";
 import { useCan } from "../lib/permissions.js";
@@ -21,6 +21,14 @@ const FILTERS = [
   { key: "paid=PAID", tkey: "sales.filterPaid" },
   { key: "paid=DEBT", tkey: "sales.filterDebt" },
 ];
+
+// Calculate profit for a sale
+function calculateProfit(sale) {
+  if (!sale.car?.purchase) return 0;
+  const salePrice = sale.totalAfterReduction || 0;
+  const purchasePrice = sale.car.purchase.purchasePrice || 0;
+  return salePrice - purchasePrice;
+}
 
 export default function Sales() {
   const { t } = useTranslation();
@@ -80,6 +88,9 @@ export default function Sales() {
     can("sales", "delete") && { label: t("common.delete"), icon: Trash2, danger: true, onClick: () => setDeleteId(s.id) },
   ];
 
+  const profit = calculateProfit(viewItem || {});
+  const profitColor = profit >= 0 ? "text-emerald-400" : "text-rose-400";
+
   return (
     <div>
       <PageHeader title={t("nav.sales")} />
@@ -99,65 +110,84 @@ export default function Sales() {
         <EmptyState message={t("sales.noSales")} />
       ) : view === "cards" ? (
         <AnimatedGrid className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {sales.map((s) => (
-            <Card key={s.id} className="p-4 flex gap-4">
-              <div className="w-24 h-[72px] rounded-lg overflow-hidden shrink-0"><CarImage images={s.car?.images} heightClass="h-[72px]" /></div>
-              <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="heading text-sm text-text-primary">{s.client?.firstName} {s.client?.lastName}</p>
-                    <p className="text-xs text-text-muted">{s.reference} · {formatDate(s.date)}</p>
+          {sales.map((s) => {
+            const saleProfit = calculateProfit(s);
+            const isProfitable = saleProfit >= 0;
+            return (
+              <Card key={s.id} className="p-4 flex gap-4">
+                <div className="w-24 h-[72px] rounded-lg overflow-hidden shrink-0"><CarImage images={s.car?.images} heightClass="h-[72px]" /></div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="heading text-sm text-text-primary">{s.client?.firstName} {s.client?.lastName}</p>
+                      <p className="text-xs text-text-muted">{s.reference} · {formatDate(s.date)}</p>
+                    </div>
+                    <ActionMenu items={menuItems(s)} />
                   </div>
-                  <ActionMenu items={menuItems(s)} />
+                  <p className="text-xs text-text-muted my-1">{s.car?.brand} {s.car?.model} · {s.car?.plate}</p>
+                  <div className="flex gap-1.5 mb-1"><Badge color={s.saleType === "DEPOSIT" ? "warning" : "success"}>{s.saleType === "DEPOSIT" ? t("sales.deposit") : t("sales.normal")}</Badge>{s.amountRest > 0 && <Badge color="debt">Dette</Badge>}</div>
+                  <div className="flex justify-between items-center text-sm">
+                    <div>
+                      <span className="text-text-primary">{formatAmount(s.totalAfterReduction)}</span>
+                      <span className="text-text-muted mx-1">·</span>
+                      <span className={`font-semibold ${isProfitable ? "text-emerald-400" : "text-rose-400"}`}>
+                        <TrendingUp size={12} className="inline mr-0.5" />
+                        {formatAmount(saleProfit)}
+                      </span>
+                    </div>
+                    <span className="text-text-muted">{formatAmount(s.amountPaid)}</span>
+                  </div>
                 </div>
-                <p className="text-xs text-text-muted my-1">{s.car?.brand} {s.car?.model} · {s.car?.plate}</p>
-                <div className="flex gap-1.5 mb-1"><Badge color={s.saleType === "DEPOSIT" ? "warning" : "success"}>{s.saleType === "DEPOSIT" ? t("sales.deposit") : t("sales.normal")}</Badge>{s.amountRest > 0 ? <Badge color="debt">{t("sales.debt")}</Badge> : <Badge color="success">{t("sales.paid")}</Badge>}</div>
-                <div className="flex justify-between text-sm"><span className="text-text-primary">{formatAmount(s.totalAfterReduction)}</span><span><span className="text-emerald-400">{formatAmount(s.amountPaid)}</span>{s.amountRest > 0 && <span className="text-rose-400"> · {formatAmount(s.amountRest)}</span>}</span></div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </AnimatedGrid>
       ) : (
         <Card className="overflow-x-auto p-0">
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr className="text-left rtl:text-right bg-red-600/10 border-b border-red-600/30">
-                {["N°", t("common.client"), t("common.vehicle"), t("common.total"), t("common.paid"), t("common.rest"), t("common.status"), t("common.type"), t("common.date"), ""].map((h, i) => (
+                {["N°", t("common.client"), t("common.vehicle"), t("common.total"), "Profit/Perte", t("common.paid"), t("common.rest"), t("common.status"), t("common.type"), t("common.date"), ""].map((h, i) => (
                   <th key={i} className="p-3.5 label-caps !text-red-300/80">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {sales.map((s, i) => (
-                <motion.tr
-                  key={s.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: i * 0.03 }}
-                  className={`border-b border-red-600/10 transition-colors hover:bg-red-600/8 ${i % 2 ? "bg-white/[0.015]" : ""}`}
-                >
-                  <td className="p-3 text-text-muted font-mono text-xs">{s.reference}</td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-red-900 text-white flex items-center justify-center text-[0.6rem] font-black shrink-0">{initials(`${s.client?.firstName} ${s.client?.lastName}`)}</div>
-                      <span className="text-text-primary">{s.client?.firstName} {s.client?.lastName}</span>
-                    </div>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-10 h-7 rounded overflow-hidden shrink-0"><CarImage images={s.car?.images} heightClass="h-7" /></div>
-                      <span className="text-text-muted">{s.car?.brand} {s.car?.model}</span>
-                    </div>
-                  </td>
-                  <td className="p-3 text-text-primary font-bold">{formatAmount(s.totalAfterReduction)}</td>
-                  <td className="p-3 text-emerald-400">{formatAmount(s.amountPaid)}</td>
-                  <td className="p-3">{s.amountRest > 0 ? <span className="text-rose-400 font-bold">{formatAmount(s.amountRest)}</span> : <span className="text-text-muted">—</span>}</td>
-                  <td className="p-3">{s.amountRest > 0 ? <Badge color="debt">{t("sales.debt")}</Badge> : <Badge color="success">{t("sales.paid")}</Badge>}</td>
-                  <td className="p-3"><Badge color={s.saleType === "DEPOSIT" ? "warning" : "success"}>{s.saleType === "DEPOSIT" ? t("sales.deposit") : t("sales.normal")}</Badge></td>
-                  <td className="p-3 text-text-muted whitespace-nowrap">{formatDate(s.date)}</td>
-                  <td className="p-3"><ActionMenu items={menuItems(s)} /></td>
-                </motion.tr>
-              ))}
+              {sales.map((s, i) => {
+                const saleProfit = calculateProfit(s);
+                const isProfitable = saleProfit >= 0;
+                return (
+                  <motion.tr
+                    key={s.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.03 }}
+                    className={`border-b border-red-600/10 transition-colors hover:bg-red-600/8 ${i % 2 ? "bg-white/[0.015]" : ""}`}
+                  >
+                    <td className="p-3 text-text-muted font-mono text-xs">{s.reference}</td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-red-600 to-red-900 text-white flex items-center justify-center text-[0.6rem] font-black shrink-0">{initials(`${s.client?.firstName || ""} ${s.client?.lastName || ""}`)}</div>
+                        <span className="text-text-primary">{s.client?.firstName} {s.client?.lastName}</span>
+                      </div>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-10 h-7 rounded overflow-hidden shrink-0"><CarImage images={s.car?.images} heightClass="h-7" /></div>
+                        <span className="text-text-muted">{s.car?.brand} {s.car?.model}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-text-primary font-bold">{formatAmount(s.totalAfterReduction)}</td>
+                    <td className={`p-3 font-bold ${isProfitable ? "text-emerald-400" : "text-rose-400"}`}>{formatAmount(saleProfit)}</td>
+                    <td className="p-3 text-emerald-400">{formatAmount(s.amountPaid)}</td>
+                    <td className="p-3">{s.amountRest > 0 ? <span className="text-rose-400 font-bold">{formatAmount(s.amountRest)}</span> : <span className="text-text-muted">—</span>}</td>
+                    <td className="p-3">{s.amountRest > 0 ? <Badge color="debt">{t("sales.debt")}</Badge> : <Badge color="success">{t("sales.paid")}</Badge>}</td>
+                    <td className="p-3"><Badge color={s.saleType === "DEPOSIT" ? "warning" : "success"}>{s.saleType === "DEPOSIT" ? t("sales.deposit") : t("sales.normal")}</Badge></td>
+                    <td className="p-3 text-text-muted whitespace-nowrap">{formatDate(s.date)}</td>
+                    <td className="p-3"><ActionMenu items={menuItems(s)} /></td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
           </table>
         </Card>
@@ -176,11 +206,20 @@ export default function Sales() {
                 [t("pos.basePrice")]: formatAmount(viewItem.totalBeforeTax), [t("pos.tva")]: viewItem.tvaEnabled ? `${viewItem.tvaRate}%` : t("common.no"),
                 [t("pos.finalTotal")]: formatAmount(viewItem.totalAfterReduction), [t("common.paid")]: formatAmount(viewItem.amountPaid),
                 [t("common.rest")]: formatAmount(viewItem.amountRest), [t("common.type")]: viewItem.saleType === "DEPOSIT" ? t("sales.deposit") : t("sales.normal"),
-              }).map(([k, v]) => <div key={k} className="flex justify-between text-sm border-b border-red-600/10 py-1.5"><span className="text-text-muted">{k}</span><span className="text-text-primary text-right">{v || "—"}</span></div>)}
+              }).map(([k, v]) => <div key={k} className="flex justify-between text-sm border-b border-red-600/10 py-1.5"><span className="text-text-muted">{k}</span><span className="text-text-primary">{v ?? "—"}</span></div>
+              )}
+              <div className="flex justify-between text-sm border-b border-red-600/10 py-1.5">
+                <span className="text-text-muted">Profit/Perte</span>
+                <span className={`font-bold ${profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  <TrendingUp size={14} className="inline mr-1" />
+                  {formatAmount(profit)}
+                </span>
+              </div>
             </div>
             {viewItem.payments?.length > 0 && (
               <div><h4 className="heading text-xs text-text-primary mb-2">{t("sales.paymentsHistory")}</h4>
-                {viewItem.payments.map((p) => <div key={p.id} className="flex justify-between text-sm border-b border-red-600/10 py-1"><span className="text-text-muted">{formatDate(p.date)} — {p.description}</span><span className="text-emerald-400">{formatAmount(p.amount)}</span></div>)}
+                {viewItem.payments.map((p) => <div key={p.id} className="flex justify-between text-sm border-b border-red-600/10 py-1"><span className="text-text-muted">{formatDate(p.date)} — {p.description || "Paiement"}</span><span className="text-emerald-400">{formatAmount(p.amount)}</span></div>
+                )}
               </div>
             )}
             <button className="btn-ghost w-full" onClick={() => doPrint(viewItem)}><Printer size={14} /> {t("sales.printInvoice")}</button>
