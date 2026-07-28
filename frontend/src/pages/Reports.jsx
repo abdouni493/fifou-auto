@@ -237,8 +237,8 @@ export default function Reports() {
           <Section title="1. Synthèse Globale">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                ["Ventes", `${report.synthese.totalSalesCount} op.", money(report.synthese.totalSalesAmount), "text-emerald-400"],
-                ["Achats", `${report.synthese.totalPurchaseCount} op.", money(report.synthese.totalPurchaseAmount), "text-violet-400"],
+                ["Ventes", `${report.synthese.totalSalesCount} op.`, money(report.synthese.totalSalesAmount), "text-emerald-400"],
+                ["Achats", `${report.synthese.totalPurchaseCount} op.`, money(report.synthese.totalPurchaseAmount), "text-violet-400"],
                 ["Dépenses véhicules", "", money(report.synthese.totalCarExpenses), "text-amber-400"],
                 ["Dépenses showroom", "", money(report.synthese.totalShowroomExpenses), "text-amber-400"],
                 ["Bénéfice brut", "", money(report.synthese.grossProfit), "text-emerald-400"],
