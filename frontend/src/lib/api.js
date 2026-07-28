@@ -36,6 +36,23 @@ function shapeSale(s) {
   // totalAfterTax isn't a column — derive it for the printed invoice
   const base = Number(s.totalBeforeTax) || 0;
   s.totalAfterTax = s.tvaEnabled ? Math.round(base * (1 + (Number(s.tvaRate) || 0) / 100)) : base;
+
+  // Derive purchase price, car expenses, total cost & gain for this sale
+  const purchaseObj = s.car?.purchase || (Array.isArray(s.car?.purchases) ? s.car.purchases[0] : null);
+  const purchasePrice = Number(purchaseObj?.purchasePrice || purchaseObj?.purchase_price || 0);
+  const carExpensesList = Array.isArray(s.car?.expenses)
+    ? s.car.expenses.filter((e) => e.type === "CAR" || !e.type)
+    : [];
+  const carExpenses = carExpensesList.reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  const totalCost = purchasePrice + carExpenses;
+  const salePrice = Number(s.totalAfterReduction) || 0;
+
+  s.purchasePrice = purchasePrice;
+  s.carExpenses = carExpenses;
+  s.totalCost = totalCost;
+  s.hasPurchaseInfo = purchasePrice > 0 || carExpenses > 0;
+  s.gain = s.hasPurchaseInfo ? salePrice - totalCost : 0;
+
   return s;
 }
 
@@ -60,7 +77,7 @@ const PURCHASE_FULL = `
 `;
 const SALE_FULL = `
   *,
-  car:cars(*, car_documents(*)),
+  car:cars(*, car_documents(*), purchases(*), expenses(*)),
   client:clients(*),
   payments:sale_payments(*)
 `;

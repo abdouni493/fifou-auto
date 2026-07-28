@@ -332,7 +332,12 @@
     "edit": "Modifier la vente",
     "deleteMsg": "Supprimer cette vente ? Le véhicule redeviendra disponible.",
     "paidToast": "Règlement enregistré avec succès",
-    "deletedToast": "Vente supprimée"
+    "deletedToast": "Vente supprimée",
+    "gain": "Gain",
+    "purchaseCost": "Prix d'achat",
+    "carExpenses": "Dépenses véhicule",
+    "totalCost": "Coût total",
+    "financialSummary": "Récapitulatif Financier & Gain"
   },
   "payments": {
     "title": "Paiements — Véhicules Client",
