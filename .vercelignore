@@ -1,15 +1,12 @@
-# Dependencies
-node_modules/
-
-# Environment
-.env
-.env.local
-.env.*.local
-
-# Database & SQL
-*.sql
+# Backend (not deployed to Vercel)
 backend/
 
-# Documentation & Prompt
+# SQL files
+*.sql
+
+# Documentation
 README.md
 prompt.md
+
+# Misc
+.claude/
