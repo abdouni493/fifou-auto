@@ -1,45 +1,15 @@
 # Dependencies
 node_modules/
-.pnp
-.pnp.js
-
-# Build output
-dist/
-build/
 
 # Environment
 .env
 .env.local
 .env.*.local
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.swn
+# Database & SQL
+*.sql
+backend/
 
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Database
-*.db
-*.sqlite
-.prisma/
-
-# Testing
-coverage/
-.nyc_output/
-
-# Misc
-.git
-.gitignore
+# Documentation & Prompt
 README.md
 prompt.md
