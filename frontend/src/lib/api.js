@@ -1098,6 +1098,19 @@ export const expensesApi = {
     if (error) throw error;
     return rows(data);
   },
+  // Expenses of a period, for the printable report. `type` empty = both kinds.
+  async listRange({ from, to, type = "" } = {}) {
+    let q = supabase
+      .from("expenses")
+      .select("*, car:cars(brand, model, plate, images)")
+      .order("date", { ascending: true });
+    if (type) q = q.eq("type", type);
+    if (from) q = q.gte("date", from);
+    if (to) q = q.lte("date", to);
+    const { data, error } = await q;
+    if (error) throw error;
+    return rows(data);
+  },
   async create(payload) {
     const { data, error } = await supabase
       .from("expenses")

@@ -12,7 +12,7 @@ const serialize = (e) => ({ ...e, car: e.car ? serializeCar(e.car) : e.car });
 router.get(
   "/",
   asyncHandler(async (req, res) => {
-    const { type, search } = req.query;
+    const { type, search, from, to } = req.query;
     const where = {};
     if (type) where.type = type;
     if (search) {
@@ -20,6 +20,12 @@ router.get(
         { name: { contains: search } },
         { description: { contains: search } },
       ];
+    }
+    // Period filter used by the printable expenses report
+    if (from || to) {
+      where.date = {};
+      if (from) where.date.gte = new Date(from);
+      if (to) where.date.lte = new Date(`${to}T23:59:59.999`);
     }
     const expenses = await prisma.expense.findMany({
       where,

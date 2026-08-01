@@ -81,6 +81,30 @@ const L = {
     energyLabels: { ESSENCE: "Essence", DIESEL: "Diesel", HYBRID: "Hybride", ELECTRIC: "Électrique" },
     gearboxLabels: { MANUAL: "Manuelle", AUTO: "Automatique" },
     kmUnit: "km",
+    // Expenses period report
+    expensesTitle: "Rapport des Dépenses",
+    expensesScopeAll: "Toutes les dépenses (véhicules + showroom)",
+    expensesScopeCar: "Dépenses véhicules",
+    expensesScopeShowroom: "Dépenses showroom",
+    period: "Période",
+    summary: "Récapitulatif de la période",
+    countLabel: "Nombre de dépenses",
+    carExpensesTotal: "Total dépenses véhicules",
+    showroomExpensesTotal: "Total dépenses showroom",
+    grandTotal: "Total général",
+    detailTitle: "Détail des dépenses",
+    monthlyRecap: "Récapitulatif par mois",
+    colNo: "N°",
+    colDate: "Date",
+    colName: "Désignation",
+    colDesc: "Description",
+    colCategory: "Véhicule / Catégorie",
+    colAmount: "Montant",
+    colMonth: "Mois",
+    colOps: "Opérations",
+    showroomCat: "Showroom",
+    noExpenses: "Aucune dépense enregistrée pour cette période.",
+    preparedBy: "Établi par",
     // New: deposit conditions
     depositConditionsTitle: "CONDITION RELATIVE AUX ARRHES",
     depositConditionsText: `Le montant versé par le client à la réservation du véhicule est expressément considéré comme des ARRHES DE RÉSERVATION.
@@ -148,6 +172,30 @@ Le client reconnaît avoir été informé de cette condition avant le versement 
     energyLabels: { ESSENCE: "بنزين", DIESEL: "ديزل", HYBRID: "هجين", ELECTRIC: "كهربائي" },
     gearboxLabels: { MANUAL: "يدوية", AUTO: "أوتوماتيكية" },
     kmUnit: "كم",
+    // Expenses period report
+    expensesTitle: "تقرير المصاريف",
+    expensesScopeAll: "جميع المصاريف (المركبات + المعرض)",
+    expensesScopeCar: "مصاريف المركبات",
+    expensesScopeShowroom: "مصاريف المعرض",
+    period: "الفترة",
+    summary: "ملخص الفترة",
+    countLabel: "عدد المصاريف",
+    carExpensesTotal: "إجمالي مصاريف المركبات",
+    showroomExpensesTotal: "إجمالي مصاريف المعرض",
+    grandTotal: "الإجمالي العام",
+    detailTitle: "تفاصيل المصاريف",
+    monthlyRecap: "ملخص شهري",
+    colNo: "الرقم",
+    colDate: "التاريخ",
+    colName: "التسمية",
+    colDesc: "الوصف",
+    colCategory: "المركبة / الصنف",
+    colAmount: "المبلغ",
+    colMonth: "الشهر",
+    colOps: "العمليات",
+    showroomCat: "المعرض",
+    noExpenses: "لا توجد مصاريف مسجلة خلال هذه الفترة.",
+    preparedBy: "أعدّه",
     // New: deposit conditions (Arabic translation)
     depositConditionsTitle: "شروط متعلقة بالعربون",
     depositConditionsText: `المبلغ المدفوع من قبل العميل عند حجز المركبة يُعتَبر صراحةً عربونًا للحجز.
@@ -619,6 +667,231 @@ export function PaymentReceipt({ payment, showroom, history = [], lang = "fr" })
       )}
 
       <Signatures left={x.sigClient} right={x.sigShowroom} />
+      <Footer showroom={showroom} lang={lang} />
+    </div>
+  );
+}
+
+// ============================================================================
+// Expenses Report (period) — multi-page friendly table document
+// ============================================================================
+const monthKeyOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+
+// Summary tile used by the report header strip
+function StatBox({ label, value, accent }) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${accent ? ACCENT : LINE}`,
+        borderRadius: 6,
+        padding: "6px 9px",
+        background: accent ? ACCENT : SOFT,
+        color: accent ? "#fff" : INK,
+        ...exact,
+      }}
+    >
+      <div style={{ fontSize: 8.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em", color: accent ? "rgba(255,255,255,0.85)" : MUTE }}>
+        {label}
+      </div>
+      <div style={{ fontWeight: 900, fontSize: 13, marginTop: 1, ...ltr, textAlign: "inherit" }}>{value}</div>
+    </div>
+  );
+}
+
+export function ExpensesReport({ expenses = [], showroom, from, to, scope = "ALL", lang = "fr" }) {
+  const x = tr(lang);
+  const ar = isAr(lang);
+  const alignStart = ar ? "right" : "left";
+  const alignEnd = ar ? "left" : "right";
+
+  // oldest → newest reads best on a period statement
+  const list = [...expenses].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const amountOf = (e) => Number(e.amount) || 0;
+  const carTotal = list.filter((e) => e.type === "CAR").reduce((a, e) => a + amountOf(e), 0);
+  const showroomTotal = list.filter((e) => e.type !== "CAR").reduce((a, e) => a + amountOf(e), 0);
+  const total = carTotal + showroomTotal;
+
+  // month buckets for the recap table (only useful when the period spans several months)
+  const monthly = [];
+  const mIdx = {};
+  for (const e of list) {
+    const d = new Date(e.date);
+    if (isNaN(d)) continue;
+    const key = monthKeyOf(d);
+    if (!(key in mIdx)) {
+      mIdx[key] = monthly.length;
+      monthly.push({
+        key,
+        label: d.toLocaleDateString(ar ? "ar-DZ" : "fr-FR", { month: "long", year: "numeric" }),
+        count: 0,
+        amount: 0,
+      });
+    }
+    monthly[mIdx[key]].count += 1;
+    monthly[mIdx[key]].amount += amountOf(e);
+  }
+
+  const scopeLabel =
+    scope === "CAR" ? x.expensesScopeCar : scope === "SHOWROOM" ? x.expensesScopeShowroom : x.expensesScopeAll;
+
+  const th = {
+    background: ACCENT,
+    color: "#fff",
+    padding: "5px 7px",
+    fontSize: 9,
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+    border: `1px solid ${ACCENT}`,
+    textAlign: alignStart,
+    ...exact,
+  };
+  const td = {
+    padding: "4px 7px",
+    border: `1px solid ${LINE}`,
+    fontSize: 10,
+    verticalAlign: "top",
+    textAlign: alignStart,
+  };
+  const tf = { ...td, background: SOFT, fontWeight: 900, fontSize: 11, border: `1px solid ${LINE}`, ...exact };
+
+  return (
+    <div style={sheetStyle(lang)}>
+      <Header showroom={showroom} lang={lang} />
+
+      {/* Title band — period statement instead of a document number */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          background: SOFT,
+          border: `1px solid ${LINE}`,
+          ...(ar ? { borderRight: `4px solid ${ACCENT}` } : { borderLeft: `4px solid ${ACCENT}` }),
+          borderRadius: 6,
+          padding: "7px 12px",
+          marginBottom: 10,
+          ...exact,
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 900, fontSize: 14, textTransform: "uppercase", color: ACCENT, letterSpacing: "0.03em" }}>
+            {x.expensesTitle}
+          </div>
+          <div style={{ fontSize: 9.5, color: MUTE, marginTop: 1 }}>{scopeLabel}</div>
+        </div>
+        <div style={{ textAlign: alignEnd, fontSize: 10 }}>
+          <div style={{ fontSize: 11, fontWeight: 800 }}>
+            {x.period} :{" "}
+            <span style={ltr}>
+              {formatDate(from)} — {formatDate(to)}
+            </span>
+          </div>
+          <div style={{ color: MUTE }}>
+            {x.countLabel} : <span style={ltr}>{list.length}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Summary strip */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 7, marginBottom: 10, breakInside: "avoid" }}>
+        <StatBox label={x.countLabel} value={String(list.length)} />
+        <StatBox label={x.carExpensesTotal} value={formatAmount(carTotal)} />
+        <StatBox label={x.showroomExpensesTotal} value={formatAmount(showroomTotal)} />
+        <StatBox label={x.grandTotal} value={formatAmount(total)} accent />
+      </div>
+
+      {/* Detail table */}
+      <div style={{ fontWeight: 900, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.05em", color: ACCENT, marginBottom: 4 }}>
+        {x.detailTitle}
+      </div>
+
+      {list.length === 0 ? (
+        <div style={{ border: `1px solid ${LINE}`, borderRadius: 6, padding: "14px 10px", textAlign: "center", color: MUTE }}>
+          {x.noExpenses}
+        </div>
+      ) : (
+        <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "24%" }} />
+            <col style={{ width: "17%" }} />
+            <col style={{ width: "16%" }} />
+          </colgroup>
+          {/* thead repeats automatically on every printed page */}
+          <thead style={{ display: "table-header-group" }}>
+            <tr>
+              <th style={th}>{x.colNo}</th>
+              <th style={th}>{x.colDate}</th>
+              <th style={th}>{x.colName}</th>
+              <th style={th}>{x.colDesc}</th>
+              <th style={th}>{x.colCategory}</th>
+              <th style={{ ...th, textAlign: alignEnd }}>{x.colAmount}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {list.map((e, i) => {
+              const car = e.car;
+              const category =
+                e.type === "CAR"
+                  ? [car?.brand, car?.model].filter(Boolean).join(" ") || x.vehicle
+                  : x.showroomCat;
+              return (
+                <tr key={e.id ?? i} style={{ breakInside: "avoid", background: i % 2 ? SOFT : "#fff", ...exact }}>
+                  <td style={{ ...td, color: MUTE, ...ltr, textAlign: alignStart }}>{i + 1}</td>
+                  <td style={{ ...td, whiteSpace: "nowrap", ...ltr, textAlign: alignStart }}>{formatDate(e.date)}</td>
+                  <td style={{ ...td, fontWeight: 700 }}>{e.name || "—"}</td>
+                  <td style={{ ...td, color: MUTE }}>{e.description || "—"}</td>
+                  <td style={{ ...td, fontSize: 9.5 }}>
+                    <div>{category}</div>
+                    {e.type === "CAR" && car?.plate && <div style={{ color: MUTE, ...ltr }}>{car.plate}</div>}
+                  </td>
+                  <td style={{ ...td, textAlign: alignEnd, fontWeight: 800, whiteSpace: "nowrap", ...ltr }}>
+                    {formatAmount(amountOf(e))}
+                  </td>
+                </tr>
+              );
+            })}
+            {/* Grand total closes the list — kept in <tbody> so it prints once,
+                at the very end, instead of repeating on every page. */}
+            <tr style={{ breakInside: "avoid" }}>
+              <td style={{ ...tf, textTransform: "uppercase" }} colSpan={5}>
+                {x.grandTotal}
+              </td>
+              <td style={{ ...tf, textAlign: alignEnd, color: ACCENT, whiteSpace: "nowrap", ...ltr }}>{formatAmount(total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      )}
+
+      {/* Monthly recap — only when the period actually covers several months */}
+      {monthly.length > 1 && (
+        <Frame title={x.monthlyRecap} style={{ marginTop: 10 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead style={{ display: "table-header-group" }}>
+              <tr>
+                <th style={{ ...th, background: SOFT, color: INK, border: `1px solid ${LINE}` }}>{x.colMonth}</th>
+                <th style={{ ...th, background: SOFT, color: INK, border: `1px solid ${LINE}`, textAlign: "center" }}>{x.colOps}</th>
+                <th style={{ ...th, background: SOFT, color: INK, border: `1px solid ${LINE}`, textAlign: alignEnd }}>{x.colAmount}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthly.map((m) => (
+                <tr key={m.key} style={{ breakInside: "avoid" }}>
+                  <td style={{ ...td, textTransform: "capitalize" }}>{m.label}</td>
+                  <td style={{ ...td, textAlign: "center", ...ltr }}>{m.count}</td>
+                  <td style={{ ...td, textAlign: alignEnd, fontWeight: 800, ...ltr }}>{formatAmount(m.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Frame>
+      )}
+
+      <Signatures left={x.preparedBy} right={x.sigShowroom} />
       <Footer showroom={showroom} lang={lang} />
     </div>
   );

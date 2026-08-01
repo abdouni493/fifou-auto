@@ -1,16 +1,42 @@
 import { useState } from "react";
-import { Pencil, Trash2, Car, Building2 } from "lucide-react";
+import { motion } from "framer-motion";
+import { Pencil, Trash2, Car, Building2, Printer, Loader2, FileText } from "lucide-react";
 import { expensesApi, carsApi } from "../lib/api.js";
 import { useFetch } from "../hooks/useApi.js";
 import { useCan } from "../lib/permissions.js";
-import { Card, Modal, ConfirmModal, Field, EmptyState, SkeletonGrid, AnimatedGrid } from "../components/ui.jsx";
+import { useStore } from "../store/useStore.js";
+import { Card, Modal, ConfirmModal, Field, EmptyState, SkeletonGrid, AnimatedGrid, useToast } from "../components/ui.jsx";
 import PageHeader from "../components/PageHeader.jsx";
 import SearchSelect from "../components/SearchSelect.jsx";
 import { CarImage } from "../components/CarCard.jsx";
+import { usePrintDialog } from "../components/PrintChooser.jsx";
+import { ExpensesReport } from "../components/PrintTemplates.jsx";
 import { formatAmount, formatDate, toDateInput } from "../utils/format.js";
+
+// Period presets offered in the print dialog
+function periodPresets() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  return [
+    { label: "Ce mois", from: new Date(y, m, 1), to: now },
+    { label: "Mois dernier", from: new Date(y, m - 1, 1), to: new Date(y, m, 0) },
+    { label: "Cette année", from: new Date(y, 0, 1), to: now },
+    { label: "12 derniers mois", from: new Date(y, m - 11, 1), to: now },
+  ].map((p) => ({ label: p.label, from: toDateInput(p.from), to: toDateInput(p.to) }));
+}
+
+const SCOPES = [
+  { key: "CAR", label: "Véhicules", icon: Car },
+  { key: "SHOWROOM", label: "Showroom", icon: Building2 },
+  { key: "ALL", label: "Toutes", icon: FileText },
+];
 
 export default function Expenses() {
   const can = useCan();
+  const toast = useToast();
+  const { settings } = useStore();
+  const openPrint = usePrintDialog();
   const [tab, setTab] = useState("CAR");
   const { data: expenses, loading, refetch } = useFetch(() => expensesApi.list(tab), [tab]);
   const [form, setForm] = useState(null);
@@ -18,10 +44,55 @@ export default function Expenses() {
   const [selectedCar, setSelectedCar] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
 
+  // ── Print-a-period state ────────────────────────────────────────────────
+  const [printOpen, setPrintOpen] = useState(false);
+  const [scope, setScope] = useState("CAR");
+  const [range, setRange] = useState({ from: "", to: "" });
+  const [rows, setRows] = useState(null); // generated list (null = not generated yet)
+  const [generating, setGenerating] = useState(false);
+
   const total = (expenses || []).reduce((a, e) => a + e.amount, 0);
 
   const openNew = () => { setForm({ name: "", description: "", amount: "", date: toDateInput(new Date()) }); setEditId(null); setSelectedCar(null); };
   const openEdit = (e) => { setForm({ ...e, date: toDateInput(e.date) }); setEditId(e.id); setSelectedCar(e.car || null); };
+
+  const openPrintModal = () => {
+    const [thisMonth] = periodPresets();
+    setScope(tab);
+    setRange({ from: thisMonth.from, to: thisMonth.to });
+    setRows(null);
+    setPrintOpen(true);
+  };
+
+  const generate = async () => {
+    if (!range.from || !range.to) { toast("Sélectionnez une date de début et une date de fin", "error"); return; }
+    if (range.from > range.to) { toast("La date de début doit précéder la date de fin", "error"); return; }
+    setGenerating(true);
+    try {
+      const data = await expensesApi.listRange({ from: range.from, to: range.to, type: scope === "ALL" ? "" : scope });
+      setRows(data);
+      if (data.length === 0) toast("Aucune dépense sur cette période", "info");
+    } catch {
+      toast("Erreur lors de la génération", "error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Changing the period/scope invalidates a previously generated list.
+  const setRangeField = (patch) => { setRange((r) => ({ ...r, ...patch })); setRows(null); };
+  const changeScope = (k) => { setScope(k); setRows(null); };
+
+  const printReport = () => {
+    if (!rows?.length) return;
+    openPrint((lang) => (
+      <ExpensesReport expenses={rows} showroom={settings} from={range.from} to={range.to} scope={scope} lang={lang} />
+    ));
+  };
+
+  const reportTotal = (rows || []).reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  const reportCarTotal = (rows || []).filter((e) => e.type === "CAR").reduce((a, e) => a + (Number(e.amount) || 0), 0);
+  const reportShowroomTotal = reportTotal - reportCarTotal;
 
   const save = async () => {
     if (!form.name || !form.amount) { alert("Nom et montant requis"); return; }
@@ -36,7 +107,13 @@ export default function Expenses() {
 
   return (
     <div>
-      <PageHeader title="Dépenses" action={can("expenses", "create") ? openNew : undefined} actionLabel={tab === "CAR" ? "Nouvelle Dépense Véhicule" : "Nouvelle Dépense"} />
+      <PageHeader title="Dépenses" action={can("expenses", "create") ? openNew : undefined} actionLabel={tab === "CAR" ? "Nouvelle Dépense Véhicule" : "Nouvelle Dépense"}>
+        {can("expenses", "print") && (
+          <motion.button className="btn-ghost" onClick={openPrintModal} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+            <Printer size={16} /> Imprimer
+          </motion.button>
+        )}
+      </PageHeader>
 
       <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
         <div className="flex gap-2">
@@ -101,6 +178,132 @@ export default function Expenses() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* ── Print a period ─────────────────────────────────────────────── */}
+      <Modal
+        open={printOpen}
+        onClose={() => setPrintOpen(false)}
+        title="Imprimer les dépenses"
+        size="lg"
+        footer={
+          <>
+            <button className="btn-ghost" onClick={() => setPrintOpen(false)}>Fermer</button>
+            <button className="btn-primary" onClick={printReport} disabled={!rows?.length}>
+              <Printer size={16} /> Imprimer
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <div>
+            <p className="label-caps">Type de dépenses</p>
+            <div className="flex gap-2 flex-wrap">
+              {SCOPES.map((s) => (
+                <button key={s.key} className={`chip ${scope === s.key ? "chip-active" : ""}`} onClick={() => changeScope(s.key)}>
+                  <s.icon size={13} /> {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <p className="label-caps">Périodes rapides</p>
+            <div className="flex gap-2 flex-wrap">
+              {periodPresets().map((p) => (
+                <button
+                  key={p.label}
+                  className={`chip ${range.from === p.from && range.to === p.to ? "chip-active" : ""}`}
+                  onClick={() => setRangeField({ from: p.from, to: p.to })}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 sm:items-end">
+            <Field label="Date de début" className="flex-1" required>
+              <input type="date" className="input" value={range.from} onChange={(e) => setRangeField({ from: e.target.value })} />
+            </Field>
+            <Field label="Date de fin" className="flex-1" required>
+              <input type="date" className="input" value={range.to} onChange={(e) => setRangeField({ to: e.target.value })} />
+            </Field>
+            <motion.button className="btn-primary" onClick={generate} disabled={generating} whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+              {generating ? (
+                <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="inline-flex">
+                  <Loader2 size={16} />
+                </motion.span>
+              ) : (
+                "Générer"
+              )}
+            </motion.button>
+          </div>
+
+          {rows === null ? (
+            <Card className="p-6 text-center text-text-muted text-sm">
+              Choisissez une période puis cliquez sur « Générer » pour afficher la liste des dépenses.
+            </Card>
+          ) : rows.length === 0 ? (
+            <Card className="p-6 text-center text-text-muted text-sm">Aucune dépense sur cette période.</Card>
+          ) : (
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  ["Dépenses", `${rows.length}`, "text-text-primary"],
+                  ["Total véhicules", formatAmount(reportCarTotal), "text-amber-400"],
+                  ["Total showroom", formatAmount(reportShowroomTotal), "text-amber-400"],
+                  ["Total général", formatAmount(reportTotal), "text-red-400"],
+                ].map(([label, value, cls]) => (
+                  <Card key={label} className="p-3">
+                    <p className="label-caps">{label}</p>
+                    <p className={`font-black ${cls}`}>{value}</p>
+                  </Card>
+                ))}
+              </div>
+
+              <Card className="p-0 overflow-hidden">
+                <div className="max-h-72 overflow-y-auto overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="text-left rtl:text-right bg-[#1a0507] border-b border-red-600/30">
+                        {["N°", "Date", "Désignation", "Description", "Véhicule / Catégorie", "Montant"].map((h) => (
+                          <th key={h} className="p-2.5 label-caps !mb-0 !text-red-300/80 whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((e, i) => (
+                        <tr key={e.id ?? i} className={`border-b border-red-600/10 ${i % 2 ? "bg-white/[0.015]" : ""}`}>
+                          <td className="p-2.5 text-text-muted">{i + 1}</td>
+                          <td className="p-2.5 text-text-muted whitespace-nowrap">{formatDate(e.date)}</td>
+                          <td className="p-2.5 text-text-primary">{e.name}</td>
+                          <td className="p-2.5 text-text-muted">{e.description || "—"}</td>
+                          <td className="p-2.5 text-text-muted">
+                            {e.type === "CAR"
+                              ? `${[e.car?.brand, e.car?.model].filter(Boolean).join(" ") || "Véhicule"}${e.car?.plate ? ` · ${e.car.plate}` : ""}`
+                              : "Showroom"}
+                          </td>
+                          <td className="p-2.5 text-amber-400 font-bold whitespace-nowrap">{formatAmount(e.amount)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-red-600/10 border-t border-red-600/30">
+                        <td className="p-2.5 heading text-xs text-text-primary" colSpan={5}>Total général</td>
+                        <td className="p-2.5 font-black text-red-400 whitespace-nowrap">{formatAmount(reportTotal)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </Card>
+
+              <p className="text-xs text-text-muted">
+                Période : {formatDate(range.from)} → {formatDate(range.to)} · Le document imprimé reprend le logo et les informations du showroom.
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
 
       <ConfirmModal open={!!deleteId} onClose={() => setDeleteId(null)} onConfirm={confirmDelete} />
