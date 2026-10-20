@@ -26,6 +26,8 @@ function SaleFlow({ car, onClose, onCreated }) {
   const [useExisting, setUseExisting] = useState(false);
   const [clientErrors, setClientErrors] = useState({});
   const [inspection, setInspection] = useState(DEFAULT_INSPECTION);
+  // prefilled with the notes captured at purchase time
+  const [notes, setNotes] = useState(car.inspection?.notes || "");
 
   // Reuse the saved checklist template (shared with purchases) so custom items persist.
   useEffect(() => {
@@ -74,7 +76,7 @@ function SaleFlow({ car, onClose, onCreated }) {
         clientId: useExisting ? client?.id : null,
         client: useExisting ? null : newClient,
         saleType, basePrice: base, tvaEnabled, tvaRate, reductionType, reductionValue,
-        amountPaid: paid, clientTakeCar, inspection, date,
+        amountPaid: paid, clientTakeCar, inspection: { ...inspection, notes: notes.trim() }, date,
       };
       const data = await salesApi.create(payload);
       onCreated(data);
@@ -138,6 +140,7 @@ function SaleFlow({ car, onClose, onCreated }) {
         {step === 1 && (
           <div className="space-y-5">
             <InspectionChecklist value={inspection} onChange={setInspection} onPersist={persistInspection} />
+            <Field label={t("common.carNotes")}><textarea className="input min-h-[80px]" rows={3} value={notes} placeholder={t("common.carNotesPlaceholder")} onChange={(e) => setNotes(e.target.value)} /></Field>
             <div className="flex justify-between pt-4">
               <button className="btn-ghost" onClick={() => setStep(0)}>← {t("common.back")}</button>
               <button className="btn-primary" onClick={() => setStep(2)}>{t("common.next")} →</button>

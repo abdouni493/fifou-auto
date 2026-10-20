@@ -48,6 +48,8 @@
     "deletedToast": "Transaction supprimée"
   },
   "common": {
+    "carNotes": "Notes sur le véhicule",
+    "carNotesPlaceholder": "Remarques à afficher sur la facture (optionnel)...",
     "search": "Rechercher...",
     "save": "Enregistrer",
     "cancel": "Annuler",

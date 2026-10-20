@@ -53,6 +53,8 @@ function PurchaseForm({ onClose, onSaved, editTarget }) {
   const [inspection, setInspection] = useState(
     hasInspectionItems(savedInspection) ? savedInspection : DEFAULT_INSPECTION
   );
+  // free-text notes travel inside the inspection JSON (no extra column needed)
+  const [notes, setNotes] = useState(savedInspection?.notes || "");
   const [date, setDate] = useState(toDateTimeLocal(editTarget?.date));
   const [saving, setSaving] = useState(false);
 
@@ -153,7 +155,7 @@ function PurchaseForm({ onClose, onSaved, editTarget }) {
         purchasePrice: Number(pricing.purchasePrice) || 0,
         sellingPrice: Number(pricing.sellingPrice) || 0,
         amountPaid: pricing.amountPaid === "" ? Number(pricing.purchasePrice) || 0 : Number(pricing.amountPaid),
-        inspection,
+        inspection: { ...inspection, notes: notes.trim() },
         date,
       };
       const data = isEdit ? await purchasesApi.update(editTarget.id, payload) : await purchasesApi.create(payload);
@@ -378,6 +380,7 @@ function PurchaseForm({ onClose, onSaved, editTarget }) {
         {step === 2 && (
           <div className="space-y-5">
             <InspectionChecklist value={inspection} onChange={setInspection} onPersist={persistInspection} />
+            <Field label={t("common.carNotes")}><textarea className="input min-h-[80px]" rows={3} value={notes} placeholder={t("common.carNotesPlaceholder")} onChange={(e) => setNotes(e.target.value)} /></Field>
             <Field label={t("purchase.purchaseDate")}><input type="datetime-local" className="input sm:max-w-xs" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
             <div className="flex justify-between pt-4">
               <button className="btn-ghost" onClick={() => setStep(1)}>← {t("common.back")}</button>

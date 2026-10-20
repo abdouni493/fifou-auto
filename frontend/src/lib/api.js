@@ -399,9 +399,11 @@ export const carsApi = {
     });
   },
   async listAvailable() {
+    // POS only needs the car + its purchase (selling price) — a lighter select
+    // than CAR_FULL keeps the page fast as history grows.
     const { data, error } = await supabase
       .from("cars")
-      .select(CAR_FULL)
+      .select("*, car_documents(*), purchases(*)")
       .eq("status", "AVAILABLE")
       .order("created_at", { ascending: false });
     if (error) throw error;
@@ -463,11 +465,16 @@ export const carsApi = {
   },
   // Remove orphaned car records (AVAILABLE with no purchase) left behind
   // by previous purchase deletions that failed to clean up the car.
+  // Only cars older than a few minutes are touched: a purchase being created
+  // right now inserts its car first, and deleting it mid-flight made the new
+  // purchase vanish from the POS until it was created again.
   async cleanupOrphaned() {
+    const cutoff = new Date(Date.now() - 10 * 60 * 1000).toISOString();
     const { data: cars, error } = await supabase
       .from("cars")
       .select("id, purchases(id)")
-      .eq("status", "AVAILABLE");
+      .eq("status", "AVAILABLE")
+      .lt("created_at", cutoff);
     if (error) throw error;
     const orphaned = (cars || []).filter((c) => !c.purchases || c.purchases.length === 0);
     let deleted = 0;
@@ -511,16 +518,15 @@ export const purchasesApi = {
       .single();
     if (carError) throw carError;
 
-    // 2. car documents (each: { type, url })
-    const docs = documents.length ? documents : car.documents || [];
-    if (docs.length > 0) {
-      const { error: docError } = await supabase
-        .from("car_documents")
-        .insert(docs.map((d) => ({ car_id: carRow.id, type: d.type, doc_url: d.url || "" })));
-      if (docError) throw docError;
-    }
+    // Any failure past this point removes the car again — otherwise it stays
+    // as an orphan (no purchase) that the POS hides, and the purchase looks
+    // like it was never created.
+    const rollback = async (err) => {
+      await supabase.from("cars").delete().eq("id", carRow.id);
+      throw err;
+    };
 
-    // 3. the purchase
+    // 2. the purchase (written right after the car so it is never orphaned)
     const { data: purchase, error: purError } = await supabase
       .from("purchases")
       .insert({
@@ -535,7 +541,16 @@ export const purchasesApi = {
       })
       .select()
       .single();
-    if (purError) throw purError;
+    if (purError) await rollback(purError);
+
+    // 3. car documents (each: { type, url })
+    const docs = documents.length ? documents : car.documents || [];
+    if (docs.length > 0) {
+      const { error: docError } = await supabase
+        .from("car_documents")
+        .insert(docs.map((d) => ({ car_id: carRow.id, type: d.type, doc_url: d.url || "" })));
+      if (docError) await rollback(docError);
+    }
 
     return getPurchaseFull(purchase.id); // enriched (joins) so the invoice can print
   },

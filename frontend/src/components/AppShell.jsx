@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useLocation, useOutlet } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { Menu, ShieldAlert } from "lucide-react";
@@ -36,7 +36,7 @@ function AnimatedOutlet() {
         exit={{ opacity: 0, x: -18 }}
         transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
       >
-        {allowed ? outlet : <AccessDenied />}
+        <Suspense fallback={null}>{allowed ? outlet : <AccessDenied />}</Suspense>
       </motion.div>
     </AnimatePresence>
   );

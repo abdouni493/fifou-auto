@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { MotionConfig } from "framer-motion";
 import { useStore } from "./store/useStore.js";
@@ -6,25 +6,25 @@ import { firstAllowedSection } from "./lib/permissions.js";
 
 import AppShell from "./components/AppShell.jsx";
 import Login from "./pages/Login.jsx";
-import Dashboard from "./pages/Dashboard.jsx";
-import Showroom from "./pages/Showroom.jsx";
-import Purchase from "./pages/Purchase.jsx";
-import POS from "./pages/POS.jsx";
-import Sales from "./pages/Sales.jsx";
-import Payments from "./pages/Payments.jsx";
-import Caisse from "./pages/Caisse.jsx";
-import WebsiteSettings from "./pages/WebsiteSettings.jsx";
-import WebsiteReservations from "./pages/WebsiteReservations.jsx";
-import Suppliers from "./pages/Suppliers.jsx";
-import Clients from "./pages/Clients.jsx";
-import Workers from "./pages/Workers.jsx";
-import Expenses from "./pages/Expenses.jsx";
-import Reports from "./pages/Reports.jsx";
-import Settings from "./pages/Settings.jsx";
+const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const Showroom = lazy(() => import("./pages/Showroom.jsx"));
+const Purchase = lazy(() => import("./pages/Purchase.jsx"));
+const POS = lazy(() => import("./pages/POS.jsx"));
+const Sales = lazy(() => import("./pages/Sales.jsx"));
+const Payments = lazy(() => import("./pages/Payments.jsx"));
+const Caisse = lazy(() => import("./pages/Caisse.jsx"));
+const WebsiteSettings = lazy(() => import("./pages/WebsiteSettings.jsx"));
+const WebsiteReservations = lazy(() => import("./pages/WebsiteReservations.jsx"));
+const Suppliers = lazy(() => import("./pages/Suppliers.jsx"));
+const Clients = lazy(() => import("./pages/Clients.jsx"));
+const Workers = lazy(() => import("./pages/Workers.jsx"));
+const Expenses = lazy(() => import("./pages/Expenses.jsx"));
+const Reports = lazy(() => import("./pages/Reports.jsx"));
+const Settings = lazy(() => import("./pages/Settings.jsx"));
 
-import Home from "./pages/website/Home.jsx";
-import CarDetail from "./pages/website/CarDetail.jsx";
-import Contacts from "./pages/website/Contacts.jsx";
+const Home = lazy(() => import("./pages/website/Home.jsx"));
+const CarDetail = lazy(() => import("./pages/website/CarDetail.jsx"));
+const Contacts = lazy(() => import("./pages/website/Contacts.jsx"));
 
 function ProtectedRoute({ children }) {
   const { user, authChecked, loadMe } = useStore();
@@ -68,6 +68,7 @@ function DefaultLanding() {
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
+    <Suspense fallback={null}>
     <Routes>
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login" element={<Login />} />
@@ -106,6 +107,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
+    </Suspense>
     </MotionConfig>
   );
 }

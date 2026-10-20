@@ -71,6 +71,7 @@ const L = {
     description: "Description",
     paymentHistory: "Historique des paiements",
     inspectionReport: "Rapport d'inspection",
+    notes: "Notes / Observations",
     security: "Sécurité", equipment: "Équipements", comfort: "Confort",
     sigSupplier: "Signature Fournisseur",
     sigSeller: "Signature Vendeur",
@@ -162,6 +163,7 @@ Le client reconnaît avoir été informé de cette condition avant le versement 
     description: "الوصف",
     paymentHistory: "سجل الدفعات",
     inspectionReport: "تقرير الفحص",
+    notes: "ملاحظات",
     security: "الأمان", equipment: "التجهيزات", comfort: "الراحة",
     sigSupplier: "توقيع المورّد",
     sigSeller: "توقيع البائع",
@@ -412,7 +414,7 @@ function CarBlock({ car, lang }) {
         <Row lang={lang} label={x.energy} value={x.energyLabels[c.energy]} />
         <Row lang={lang} label={x.gearbox} value={x.gearboxLabels[c.gearbox]} />
         <Row lang={lang} label={x.seats} value={c.seats} />
-        <Row lang={lang} label={x.mileage} value={c.mileage != null ? formatAmount(c.mileage, x.kmUnit) : "—"} />
+        <Row lang={lang} label={x.mileage} value={c.mileage != null && c.mileage !== "" ? formatAmount(c.mileage, x.kmUnit) : "—"} strong />
         <Row lang={lang} label={x.keys} value={c.keysCount != null ? c.keysCount : "—"} />
       </div>
       <Row lang={lang} label={x.vin} value={c.vin} last={docs.length === 0} />
@@ -490,6 +492,18 @@ function InspectionBlock({ inspection, lang }) {
           </div>
         ))}
       </div>
+    </Frame>
+  );
+}
+
+// ── Notes (only printed when present; clamped so the page stays one sheet) ──
+function NotesBlock({ notes, lang }) {
+  const text = typeof notes === "string" ? notes.trim() : "";
+  if (!text) return null;
+  const x = tr(lang);
+  return (
+    <Frame title={x.notes} style={{ marginTop: 8, breakInside: "avoid" }}>
+      <div style={{ fontSize: 10, color: INK, whiteSpace: "pre-line", lineHeight: 1.3, maxHeight: 62, overflow: "hidden" }}>{text}</div>
     </Frame>
   );
 }
@@ -577,6 +591,7 @@ export function PurchaseInvoice({ purchase, showroom, lang = "fr" }) {
       </div>
 
       <InspectionBlock inspection={purchase.inspection} lang={lang} />
+      <NotesBlock notes={purchase.inspection?.notes ?? purchase.car?.inspection?.notes} lang={lang} />
       <Signatures left={isSupplier ? x.sigSupplier : x.sigSeller} right={x.sigShowroom} />
       <Footer showroom={showroom} lang={lang} />
     </div>
@@ -625,6 +640,7 @@ export function SaleInvoice({ sale, showroom, lang = "fr" }) {
       </div>
 
       <InspectionBlock inspection={sale.inspection} lang={lang} />
+      <NotesBlock notes={sale.inspection?.notes || sale.car?.inspection?.notes} lang={lang} />
 
       {/* New: deposit/arrhes conditions */}
       <ConditionsBlock lang={lang} />

@@ -48,6 +48,7 @@ function SaleEditForm({ sale, onClose, onSaved }) {
     inspectionApi.getTemplate().then((tpl) => { if (hasInspectionItems(tpl)) setInspection(tpl); }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  const [notes, setNotes] = useState(sale.inspection?.notes || "");
   const persistInspection = (next) => { inspectionApi.saveTemplate(next).catch(() => {}); };
 
   // pricing
@@ -106,7 +107,7 @@ function SaleEditForm({ sale, onClose, onSaved }) {
         reductionValue,
         amountPaid: paid,
         clientTakeCar,
-        inspection,
+        inspection: { ...inspection, notes: notes.trim() },
         date,
       });
       onSaved(data);
@@ -198,6 +199,7 @@ function SaleEditForm({ sale, onClose, onSaved }) {
         {step === 1 && (
           <div className="space-y-5">
             <InspectionChecklist value={inspection} onChange={setInspection} onPersist={persistInspection} />
+            <Field label={t("common.carNotes")}><textarea className="input min-h-[80px]" rows={3} value={notes} placeholder={t("common.carNotesPlaceholder")} onChange={(e) => setNotes(e.target.value)} /></Field>
             <div className="flex justify-between gap-2 pt-4">
               <button className="btn-ghost" onClick={() => setStep(0)}>← {t("common.back")}</button>
               <div className="flex gap-2">

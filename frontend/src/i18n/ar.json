@@ -48,6 +48,8 @@
     "deletedToast": "تم حذف المعاملة"
   },
   "common": {
+    "carNotes": "ملاحظات حول السيارة",
+    "carNotesPlaceholder": "ملاحظات تظهر على الفاتورة (اختياري)...",
     "search": "بحث...",
     "save": "حفظ",
     "cancel": "إلغاء",
