@@ -391,12 +391,7 @@ export const carsApi = {
     if (search) q = q.or(`brand.ilike.%${search}%,model.ilike.%${search}%,plate.ilike.%${search}%`);
     const { data, error } = await q;
     if (error) throw error;
-    const all = rows(data).map(shapeCar);
-    // Hide orphaned cars (AVAILABLE with no purchase record)
-    return all.filter((c) => {
-      if (c.status !== "AVAILABLE") return true; // SOLD / RESERVED are always shown
-      return Array.isArray(c.purchases) ? c.purchases.length > 0 : !!c.purchase;
-    });
+    return rows(data).map(shapeCar);
   },
   async listAvailable() {
     // POS only needs the car + its purchase (selling price) — a lighter select
@@ -407,9 +402,9 @@ export const carsApi = {
       .eq("status", "AVAILABLE")
       .order("created_at", { ascending: false });
     if (error) throw error;
-    const all = rows(data).map(shapeCar);
-    // Filter out orphaned cars (no purchase record) — they shouldn't appear in POS
-    return all.filter((c) => Array.isArray(c.purchases) ? c.purchases.length > 0 : !!c.purchase);
+    // Every AVAILABLE car is shown: purchase creation rolls the car back on
+    // failure, so filtering on the embedded purchase only ever hid real stock.
+    return rows(data).map(shapeCar);
   },
   async get(id) {
     const { data, error } = await supabase.from("cars").select(CAR_FULL).eq("id", id).single();
